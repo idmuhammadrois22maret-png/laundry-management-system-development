@@ -23,17 +23,35 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    const supabase = createClient()
-    setIsLoading(true)
     setError(null)
 
-    if (password !== repeatPassword) {
-      setError('Passwords do not match')
-      setIsLoading(false)
+    // Validate email format
+    if (!email || !validateEmail(email)) {
+      setError('Please enter a valid email address')
       return
     }
+
+    // Validate password match
+    if (password !== repeatPassword) {
+      setError('Passwords do not match')
+      return
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
+    }
+
+    const supabase = createClient()
+    setIsLoading(true)
 
     try {
       const { error } = await supabase.auth.signUp({
@@ -70,11 +88,13 @@ export default function Page() {
                     <Label htmlFor="email">Email</Label>
                     <Input
                       id="email"
-                      type="email"
+                      type="text"
+                      inputMode="email"
                       placeholder="m@example.com"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      autoComplete="email"
                     />
                   </div>
                   <div className="grid gap-2">
