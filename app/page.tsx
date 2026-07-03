@@ -1,14 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { DashboardContent } from '@/components/dashboard-content'
 
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
-  const router = useRouter()
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -18,7 +16,8 @@ export default function DashboardPage() {
       } = await supabase.auth.getUser()
 
       if (!user) {
-        router.push('/auth/login')
+        // Let middleware handle the redirect via protected route
+        window.location.href = '/auth/login'
         return
       }
 
@@ -27,7 +26,7 @@ export default function DashboardPage() {
     }
 
     checkAuth()
-  }, [router])
+  }, [])
 
   if (isLoading) {
     return (
