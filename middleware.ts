@@ -1,8 +1,8 @@
-import { updateSession } from '@/lib/supabase/proxy'
 import { type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  return await updateSession(request)
+  // Middleware disabled for demo testing - allow all requests
+  return undefined
 }
 
 export const config = {
