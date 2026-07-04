@@ -3,8 +3,8 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Laundry Manager',
-  description: 'Track household laundry cycles and manage washing schedules',
+  title: 'Laundry Business Management System',
+  description: 'Complete laundry business management with customer orders, payments, and notifications',
   generator: 'v0.app',
   icons: {
     icon: [
