@@ -32,6 +32,7 @@ interface OrderEditPageProps {
 export function OrderEditPage({ order, onBack, onSuccess }: OrderEditPageProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isConfirmingComplete, setIsConfirmingComplete] = useState(false)
   const [formData, setFormData] = useState({
     status: order.status,
     payment_method: order.payment_method || 'cash',
@@ -86,6 +87,49 @@ export function OrderEditPage({ order, onBack, onSuccess }: OrderEditPageProps) 
     onSuccess()
   }
 
+  const handleConfirmComplete = async () => {
+    if (!confirm('Konfirmasi pesanan sudah selesai? Kami akan mengirim notifikasi WhatsApp ke pelanggan.')) {
+      return
+    }
+
+    setIsConfirmingComplete(true)
+    const supabase = createClient()
+
+    // Update order status to completed
+    const { error: updateError } = await supabase
+      .from('orders')
+      .update({
+        status: 'completed',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', order.id)
+
+    if (updateError) {
+      toast.error('Gagal mengonfirmasi pesanan selesai')
+      setIsConfirmingComplete(false)
+      return
+    }
+
+    // Create notification for WhatsApp
+    const { error: notifError } = await supabase
+      .from('notifications')
+      .insert({
+        order_id: order.id,
+        customer_id: order.customer_id,
+        message: `Pesanan Anda ${order.order_number} telah selesai! Silakan ambil pakaian Anda di toko kami. Terima kasih telah menggunakan layanan kami.`,
+        notification_type: 'order_completed',
+        sent: false,
+      })
+
+    if (notifError) {
+      console.log('[v0] Notification creation error:', notifError)
+    }
+
+    toast.success('Pesanan dikonfirmasi selesai! Notifikasi WhatsApp telah disiapkan untuk dikirim.')
+    setIsConfirmingComplete(false)
+    onSuccess()
+  }
+
   const handleDelete = async () => {
     if (!confirm('Apakah Anda yakin ingin menghapus pesanan ini?')) {
       return
@@ -119,20 +163,32 @@ export function OrderEditPage({ order, onBack, onSuccess }: OrderEditPageProps) 
 
   return (
     <div className="p-8 space-y-6">
-      <div className="flex items-center gap-4">
-        <Button
-          onClick={onBack}
-          variant="outline"
-          size="sm"
-          className="gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Kembali
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Edit Pesanan</h1>
-          <p className="text-muted-foreground mt-1">{order.order_number}</p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Button
+            onClick={onBack}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Kembali
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Edit Pesanan</h1>
+            <p className="text-muted-foreground mt-1">{order.order_number}</p>
+          </div>
         </div>
+        {formData.status !== 'completed' && formData.status !== 'cancelled' && (
+          <Button
+            onClick={handleConfirmComplete}
+            disabled={isConfirmingComplete}
+            className="gap-2 bg-green-600 hover:bg-green-700"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            {isConfirmingComplete ? 'Memproses...' : 'Konfirmasi Selesai'}
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
