@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { LayoutDashboard, Users, ShoppingCart, FileText, Bell } from 'lucide-react'
+import { LayoutDashboard, Users, ShoppingCart, FileText, Bell, CreditCard } from 'lucide-react'
 
 interface AppSidebarProps {
   currentPage: string
@@ -11,6 +11,8 @@ export function AppSidebar({ currentPage, onPageChange }: AppSidebarProps) {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'customers', label: 'Customers', icon: Users },
     { id: 'orders', label: 'Orders', icon: ShoppingCart },
+    { id: 'payments', label: 'Payments', icon: CreditCard },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'reports', label: 'Reports', icon: FileText },
   ]
 

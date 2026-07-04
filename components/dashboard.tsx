@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, ShoppingCart, DollarSign, AlertCircle } from 'lucide-react'
-import { PaymentsPanel } from './payments-panel'
-import { NotificationsPanel } from './notifications-panel'
 
 export function Dashboard() {
   const [stats, setStats] = useState({
@@ -190,11 +188,6 @@ export function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Payments and Notifications Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-        <PaymentsPanel />
-        <NotificationsPanel />
-      </div>
     </div>
   )
 }

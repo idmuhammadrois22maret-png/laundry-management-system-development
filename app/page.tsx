@@ -6,6 +6,8 @@ import { Dashboard } from '@/components/dashboard'
 import { CustomersPage } from '@/components/customers-page'
 import { OrdersPage } from '@/components/orders-page'
 import { ReportsPage } from '@/components/reports-page'
+import { PaymentsPageFull } from '@/components/payments-page-full'
+import { NotificationsPageFull } from '@/components/notifications-page-full'
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState('dashboard')
@@ -16,6 +18,10 @@ export default function Home() {
         return <CustomersPage />
       case 'orders':
         return <OrdersPage />
+      case 'payments':
+        return <PaymentsPageFull />
+      case 'notifications':
+        return <NotificationsPageFull />
       case 'reports':
         return <ReportsPage />
       case 'dashboard':

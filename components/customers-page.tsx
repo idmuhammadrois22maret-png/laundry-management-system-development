@@ -4,18 +4,19 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Plus, Edit2, Trash2, X } from 'lucide-react'
+import { Plus, Edit2, Trash2, Phone, Mail, MapPin } from 'lucide-react'
+import { toast } from 'sonner'
+import { CustomerCreatePage } from './customer-create-page'
+import { CustomerEditPage } from './customer-edit-page'
 
 interface Customer {
   id: string
   name: string
-  email: string
+  email?: string
   phone: string
-  address: string
-  city: string
-  postal_code: string
+  address?: string
+  city?: string
+  postal_code?: string
   total_orders: number
   total_spent: number
 }
@@ -23,258 +24,183 @@ interface Customer {
 export function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    postal_code: '',
-  })
-
-  const supabase = createClient()
+  const [currentView, setCurrentView] = useState<'list' | 'create' | 'edit'>('list')
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
 
   useEffect(() => {
     loadCustomers()
   }, [])
 
   const loadCustomers = async () => {
-    try {
-      const { data } = await supabase
-        .from('customers')
-        .select('*')
-        .order('created_at', { ascending: false })
-      setCustomers(data || [])
-    } catch (error) {
-      console.error('[v0] Error loading customers:', error)
-    } finally {
-      setIsLoading(false)
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      toast.error('Gagal memuat pelanggan')
+      return
     }
+
+    setCustomers(data || [])
+    setIsLoading(false)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    try {
-      if (editingId) {
-        // Update customer
-        const { error } = await supabase
-          .from('customers')
-          .update(formData)
-          .eq('id', editingId)
-
-        if (error) throw error
-      } else {
-        // Create customer
-        const { error } = await supabase
-          .from('customers')
-          .insert([formData])
-
-        if (error) throw error
-      }
-
-      setFormData({ name: '', email: '', phone: '', address: '', city: '', postal_code: '' })
-      setShowForm(false)
-      setEditingId(null)
-      loadCustomers()
-    } catch (error) {
-      console.error('[v0] Error saving customer:', error)
+  const handleDeleteCustomer = async (customerId: string, customerName: string) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus ${customerName}?`)) {
+      return
     }
-  }
 
-  const handleEdit = (customer: Customer) => {
-    setFormData({
-      name: customer.name,
-      email: customer.email,
-      phone: customer.phone,
-      address: customer.address,
-      city: customer.city,
-      postal_code: customer.postal_code,
-    })
-    setEditingId(customer.id)
-    setShowForm(true)
-  }
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('customers')
+      .delete()
+      .eq('id', customerId)
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this customer?')) return
-
-    try {
-      const { error } = await supabase
-        .from('customers')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-      loadCustomers()
-    } catch (error) {
-      console.error('[v0] Error deleting customer:', error)
+    if (error) {
+      toast.error('Gagal menghapus pelanggan')
+      return
     }
+
+    toast.success('Pelanggan berhasil dihapus')
+    loadCustomers()
   }
 
-  const handleCancel = () => {
-    setShowForm(false)
-    setEditingId(null)
-    setFormData({ name: '', email: '', phone: '', address: '', city: '', postal_code: '' })
+  if (currentView === 'create') {
+    return (
+      <CustomerCreatePage
+        onBack={() => {
+          setCurrentView('list')
+          loadCustomers()
+        }}
+        onSuccess={() => {
+          setCurrentView('list')
+          loadCustomers()
+        }}
+      />
+    )
+  }
+
+  if (currentView === 'edit' && selectedCustomer) {
+    return (
+      <CustomerEditPage
+        customer={selectedCustomer}
+        onBack={() => {
+          setCurrentView('list')
+          setSelectedCustomer(null)
+          loadCustomers()
+        }}
+        onSuccess={() => {
+          setCurrentView('list')
+          setSelectedCustomer(null)
+          loadCustomers()
+        }}
+      />
+    )
   }
 
   if (isLoading) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="text-muted-foreground">Loading customers...</p>
+      <div className="p-8">
+        <div className="animate-pulse space-y-4">
+          <div className="h-10 bg-muted rounded"></div>
+          <div className="h-64 bg-muted rounded"></div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Customers</h1>
-        <Button onClick={() => setShowForm(true)} className="gap-2">
+    <div className="p-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-bold text-foreground">Manajemen Pelanggan</h1>
+          <p className="text-muted-foreground mt-2">Kelola data pelanggan Anda</p>
+        </div>
+        <Button onClick={() => setCurrentView('create')} className="gap-2">
           <Plus className="w-4 h-4" />
-          Add Customer
+          Tambah Pelanggan
         </Button>
       </div>
 
-      {/* Add/Edit Form */}
-      {showForm && (
-        <Card className="mb-8">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>{editingId ? 'Edit Customer' : 'Add New Customer'}</CardTitle>
-            <Button variant="ghost" size="sm" onClick={handleCancel}>
-              <X className="w-4 h-4" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  placeholder="Customer name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone">Phone *</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  required
-                  placeholder="Phone number"
-                />
-              </div>
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="Email address"
-                />
-              </div>
-              <div>
-                <Label htmlFor="city">City</Label>
-                <Input
-                  id="city"
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  placeholder="City"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="Street address"
-                />
-              </div>
-              <div>
-                <Label htmlFor="postal">Postal Code</Label>
-                <Input
-                  id="postal"
-                  value={formData.postal_code}
-                  onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
-                  placeholder="Postal code"
-                />
-              </div>
-              <div className="md:col-span-2 flex gap-2">
-                <Button type="submit">{editingId ? 'Update' : 'Create'} Customer</Button>
-                <Button type="button" variant="outline" onClick={handleCancel}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
+      {customers.length === 0 ? (
+        <Card>
+          <CardContent className="py-12">
+            <div className="text-center">
+              <p className="text-muted-foreground mb-4">Belum ada pelanggan</p>
+              <Button onClick={() => setCurrentView('create')} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Tambah Pelanggan Pertama
+              </Button>
+            </div>
           </CardContent>
         </Card>
-      )}
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {customers.map((customer) => (
+            <Card key={customer.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">{customer.name}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Phone className="w-4 h-4" />
+                    {customer.phone}
+                  </div>
+                  {customer.email && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Mail className="w-4 h-4" />
+                      {customer.email}
+                    </div>
+                  )}
+                  {customer.city && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="w-4 h-4" />
+                      {customer.city}
+                    </div>
+                  )}
+                </div>
 
-      {/* Customers Table */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 font-semibold">Name</th>
-                  <th className="text-left py-3 px-4 font-semibold">Phone</th>
-                  <th className="text-left py-3 px-4 font-semibold">Email</th>
-                  <th className="text-left py-3 px-4 font-semibold">City</th>
-                  <th className="text-left py-3 px-4 font-semibold">Orders</th>
-                  <th className="text-left py-3 px-4 font-semibold">Total Spent</th>
-                  <th className="text-left py-3 px-4 font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customers.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="text-center py-8 text-muted-foreground">
-                      No customers found
-                    </td>
-                  </tr>
-                ) : (
-                  customers.map((customer) => (
-                    <tr key={customer.id} className="border-b border-border hover:bg-muted/50">
-                      <td className="py-3 px-4 font-medium">{customer.name}</td>
-                      <td className="py-3 px-4">{customer.phone}</td>
-                      <td className="py-3 px-4">{customer.email || '-'}</td>
-                      <td className="py-3 px-4">{customer.city || '-'}</td>
-                      <td className="py-3 px-4">{customer.total_orders}</td>
-                      <td className="py-3 px-4">Rp {(customer.total_spent / 1000).toFixed(0)}K</td>
-                      <td className="py-3 px-4 flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(customer)}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(customer.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                <div className="pt-3 border-t border-border grid grid-cols-2 gap-2 text-center">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Pesanan</p>
+                    <p className="text-lg font-bold">{customer.total_orders}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total Belanja</p>
+                    <p className="text-lg font-bold">Rp {((customer.total_spent || 0) / 1000).toLocaleString('id-ID')}K</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-3 border-t border-border">
+                  <Button
+                    onClick={() => {
+                      setSelectedCustomer(customer)
+                      setCurrentView('edit')
+                    }}
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 gap-1"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                    Edit
+                  </Button>
+                  <Button
+                    onClick={() => handleDeleteCustomer(customer.id, customer.name)}
+                    size="sm"
+                    variant="destructive"
+                    className="gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
