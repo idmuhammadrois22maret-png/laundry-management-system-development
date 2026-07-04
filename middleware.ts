@@ -1,8 +1,8 @@
-import { type NextRequest } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   // Middleware disabled for demo testing - allow all requests
-  return undefined
+  return NextResponse.next()
 }
 
 export const config = {
