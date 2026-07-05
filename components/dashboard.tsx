@@ -50,7 +50,7 @@ function StatsCard({
       <p className="text-sm font-medium text-foreground py-2">{title}</p>
       <div className="flex items-start justify-between rounded-xl bg-card p-5">
         <div className="space-y-1">
-          <p className="text-5xl font-bold tracking-tight text-foreground">{value}</p>
+          <p className="text-3xl font-bold tracking-tight text-foreground">{value}</p>
           <p className={`text-sm ${growthColor}`}>{growth}</p>
         </div>
         <div className={`flex size-[60px] shrink-0 items-center justify-center rounded-xl ${bg}`}>

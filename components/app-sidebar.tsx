@@ -3,7 +3,7 @@
 import * as React from 'react'
 import {
   LayoutDashboard, Users, ShoppingCart, CreditCard, Bell, FileText,
-  ChevronLeft, Sparkles, Moon, Sun,
+  ChevronLeft, Sparkles, Moon, Sun, ChevronRight, Home,
 } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 
@@ -32,6 +32,17 @@ export function AppSidebar({ children }: AppSidebarProps) {
   const router = useRouter()
   const { theme, toggle } = useTheme()
   const currentPage = pathname.split('/').pop() || 'dashboard'
+
+  const breadcrumbLabels: Record<string, string> = {
+    dashboard: 'Dashboard',
+    customers: 'Customers',
+    orders: 'Orders',
+    payments: 'Payments',
+    notifications: 'Notifications',
+    reports: 'Reports',
+  }
+  const breadcrumb = breadcrumbLabels[currentPage] || 'Dashboard'
+
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon">
@@ -42,10 +53,10 @@ export function AppSidebar({ children }: AppSidebarProps) {
                 size="lg"
                 className="flex items-center gap-3 w-full group cursor-default"
               >
-                <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 shadow-sm ring-1 ring-white/20">
-                  <Sparkles className="size-4 text-white" />
+                <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 shadow-sm ring-1 ring-white/20">
+                  <Sparkles className="size-5 text-white" />
                 </div>
-                <span className="font-bold text-base tracking-tight">LaundryFlow</span>
+                <span className="font-bold text-lg tracking-tight">Laundrio</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -65,7 +76,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
                         onClick={() => router.push(item.href)}
                         tooltip={item.label}
                       >
-                        <Icon className="size-4" />
+                        <Icon className="size-5" />
                         <span>{item.label}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -94,11 +105,17 @@ export function AppSidebar({ children }: AppSidebarProps) {
 
       {/* Main content */}
       <main className="flex-1 overflow-auto">
-        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2 bg-background">
+        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3 bg-background">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="-ml-1">
               <ChevronLeft className="size-4" />
             </SidebarTrigger>
+            {/* Breadcrumb */}
+            <nav className="flex items-center gap-1.5 text-sm ml-2">
+              <Home className="size-4 text-muted-foreground" />
+              <ChevronRight className="size-3.5 text-muted-foreground/50" />
+              <span className="font-medium text-foreground">{breadcrumb}</span>
+            </nav>
           </div>
           <button
             onClick={toggle}
