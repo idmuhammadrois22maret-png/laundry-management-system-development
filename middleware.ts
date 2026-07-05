@@ -29,12 +29,12 @@ export async function middleware(request: NextRequest) {
 
   if (isAppPath && !user) {
     const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
+    url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
   // Already logged in and trying to access login page? redirect to dashboard
-  if (request.nextUrl.pathname.startsWith('/auth/login') && user) {
+  if ((request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/register') && user) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)

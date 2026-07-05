@@ -6,58 +6,39 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Mail, Lock, Eye, EyeOff, User, Globe } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, Globe } from 'lucide-react'
 import { toast } from 'sonner'
 
-export default function SignUpPage() {
-  const [name, setName] = useState('')
+export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [remember, setRemember] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const router = useRouter()
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
-
-    if (!email) {
-      setError('Please enter a valid email address')
-      return
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
-      return
-    }
-
     const supabase = createClient()
     setIsLoading(true)
+    setError(null)
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: { email_confirmed: true },
-        },
-      })
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
-        if (error.message.includes('User already registered')) {
-          setError('Email sudah terdaftar. Silakan login.')
-          return
+        if (error.message.includes('Email not confirmed')) {
+          throw new Error('Email belum dikonfirmasi. Cek email Anda atau login dengan Google.')
         }
         throw error
       }
-      toast.success('Akun berhasil dibuat! Silakan login.')
-      router.push('/auth/login')
+      if (data?.user) router.push('/dashboard')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan')
     } finally {
       setIsLoading(false)
     }
@@ -74,7 +55,7 @@ export default function SignUpPage() {
       })
       if (error) throw error
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan')
       setGoogleLoading(false)
     }
   }
@@ -89,7 +70,7 @@ export default function SignUpPage() {
 
   return (
     <div className="flex min-h-svh flex-col lg:flex-row">
-      {/* Left — hero */}
+      {/* Left — hero image */}
       <div className="relative flex flex-col justify-between px-8 py-10 lg:w-[60%] lg:px-14 lg:py-12 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[#111827] via-[#1e293b] to-[#0f172a]" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIG9wYWNpdHk9IjAuMDMiPjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiLz48cGF0aCBkPSJNNDAgMGg0MHY0MEg0MHoiLz48cGF0aCBkPSJNMCA0MGg0MHY0MEgweiIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik00MCA0MGg0MHY0MEg0MHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-30" />
@@ -108,13 +89,13 @@ export default function SignUpPage() {
             custom={1} variants={fadeUp} initial="hidden" animate="visible"
             className="text-4xl font-bold tracking-tight text-white md:text-5xl lg:text-6xl"
           >
-            Create Account
+            Welcome Back
           </motion.h1>
           <motion.p
             custom={2} variants={fadeUp} initial="hidden" animate="visible"
             className="mt-4 text-lg leading-relaxed text-white/60"
           >
-            Start managing your laundry business with powerful tools for orders, customers, and payments.
+            Manage your laundry business, customers, orders, and payments from one modern dashboard.
           </motion.p>
         </div>
 
@@ -126,7 +107,7 @@ export default function SignUpPage() {
         </motion.p>
       </div>
 
-      {/* Right — sign up card */}
+      {/* Right — login card */}
       <div className="flex flex-1 items-center justify-center bg-white px-6 py-10 lg:w-[40%]">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -146,27 +127,12 @@ export default function SignUpPage() {
 
           {/* Title */}
           <div className="space-y-1">
-            <h2 className="text-2xl font-bold tracking-tight">Create account</h2>
-            <p className="text-sm text-muted-foreground">Get started with your free account.</p>
+            <h2 className="text-2xl font-bold tracking-tight">Sign in</h2>
+            <p className="text-sm text-muted-foreground">Enter your credentials to continue.</p>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSignUp} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <div className="relative">
-                <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="Budi Santoso"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
+          <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
@@ -184,13 +150,18 @@ export default function SignUpPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link href="#" className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Min. 6 characters"
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 pr-10"
@@ -206,12 +177,19 @@ export default function SignUpPage() {
               </div>
             </div>
 
+            <div className="flex items-center gap-2">
+              <Checkbox id="remember" checked={remember} onCheckedChange={(v) => setRemember(v as boolean)} />
+              <Label htmlFor="remember" className="text-sm font-normal text-muted-foreground cursor-pointer">
+                Remember me
+              </Label>
+            </div>
+
             {error && (
               <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>
             )}
 
             <Button type="submit" className="w-full h-11 text-base" disabled={isLoading}>
-              {isLoading ? 'Creating account...' : 'Create account'}
+              {isLoading ? 'Signing in...' : 'Sign in'}
             </Button>
 
             <div className="relative">
@@ -236,9 +214,9 @@ export default function SignUpPage() {
           </form>
 
           <p className="text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
-            <Link href="/auth/login" className="font-medium text-foreground underline underline-offset-2 hover:text-primary">
-              Sign in
+            Don&apos;t have an account?{' '}
+            <Link href="/register" className="font-medium text-foreground underline underline-offset-2 hover:text-primary">
+              Register
             </Link>
           </p>
         </motion.div>

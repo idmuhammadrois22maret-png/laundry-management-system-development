@@ -74,7 +74,7 @@ export function HeroSection() {
               animate="visible"
               className="mt-8 flex flex-wrap items-center gap-4"
             >
-              <Button size="lg" className="h-11 gap-2 bg-[#111827] px-6 text-white hover:bg-[#111827]/90" onClick={() => router.push('/auth/login')}>
+              <Button size="lg" className="h-11 gap-2 bg-[#111827] px-6 text-white hover:bg-[#111827]/90" onClick={() => router.push('/login')}>
                 Coba Gratis
                 <ArrowRight className="h-4 w-4" />
               </Button>

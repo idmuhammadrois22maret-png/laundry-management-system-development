@@ -60,7 +60,7 @@ export function Navbar() {
 
         {/* Desktop actions */}
         <div className="hidden items-center gap-3 md:flex">
-          <Button size="sm" className="bg-[#111827] text-white hover:bg-[#111827]/90" onClick={() => router.push('/auth/login')}>
+          <Button size="sm" className="bg-[#111827] text-white hover:bg-[#111827]/90" onClick={() => router.push('/login')}>
             Mulai
           </Button>
         </div>
