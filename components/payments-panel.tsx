@@ -66,7 +66,7 @@ export function PaymentsPanel() {
       setPayments(paymentsData || [])
       setUnpaidOrders(ordersData || [])
     } catch (error) {
-      console.error('[v0] Error loading payment data:', error)
+      console.error('Error loading payment data:', error)
     } finally {
       setIsLoading(false)
     }
@@ -109,7 +109,7 @@ export function PaymentsPanel() {
       setShowForm(false)
       loadPaymentData()
     } catch (error) {
-      console.error('[v0] Error recording payment:', error)
+      console.error('Error recording payment:', error)
       alert('Error recording payment: ' + (error as any).message)
     }
   }

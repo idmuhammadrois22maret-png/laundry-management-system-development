@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, Sparkles } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
 
 const navLinks = [
   { label: 'Fitur', href: '#features' },
@@ -16,6 +17,7 @@ const navLinks = [
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -32,11 +34,14 @@ export function Navbar() {
     >
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         {/* Logo */}
-        <a href="#" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#111827]">
-            <Sparkles className="h-4 w-4 text-white" />
-          </div>
-          <span className="text-lg font-semibold tracking-tight">LaundryFlow</span>
+        <a href="#" className="flex items-center gap-2.5">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="8" fill="#111827"/>
+            <path d="M10 20V12L16 8L22 12V20L16 24L10 20Z" fill="white" opacity="0.9"/>
+            <path d="M13 16L15 18L19 14" stroke="#111827" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M16 8V24" stroke="#111827" strokeWidth="0.5" opacity="0.2"/>
+          </svg>
+          <span className="text-lg font-semibold tracking-tight">Laundrio</span>
         </a>
 
         {/* Desktop nav */}
@@ -55,10 +60,7 @@ export function Navbar() {
 
         {/* Desktop actions */}
         <div className="hidden items-center gap-3 md:flex">
-          <Button variant="ghost" size="sm" className="text-sm text-[#6B7280]">
-            Login
-          </Button>
-          <Button size="sm" className="bg-[#111827] text-white hover:bg-[#111827]/90">
+          <Button size="sm" className="bg-[#111827] text-white hover:bg-[#111827]/90" onClick={() => router.push('/auth/login')}>
             Mulai
           </Button>
         </div>
@@ -94,10 +96,7 @@ export function Navbar() {
                 </a>
               ))}
               <hr className="my-3 border-border" />
-              <Button variant="ghost" size="sm" className="w-full justify-start text-[#6B7280]">
-                Login
-              </Button>
-              <Button size="sm" className="mt-1 w-full bg-[#111827] text-white hover:bg-[#111827]/90">
+              <Button size="sm" className="mt-1 w-full bg-[#111827] text-white hover:bg-[#111827]/90" onClick={() => router.push('/app')}>
                 Mulai
               </Button>
             </div>

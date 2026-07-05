@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Dialog,
   DialogContent,
@@ -11,18 +12,23 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import { Plus, Edit2, Trash2, Calendar, User, DollarSign } from 'lucide-react'
+/**/
+import { Plus, Edit2, Trash2, Calendar, User, DollarSign, Printer, MessageSquare, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { OrderCreatePage } from './order-create-page'
 import { OrderEditPage } from './order-edit-page'
+import { DeleteConfirmDialog } from './delete-confirm-dialog'
+import { openInvoiceWindow, getWhatsAppUrl } from '@/lib/invoice'
 
 interface Order {
   id: string
+  customer_id: string
   order_number: string
   status: string
   total_amount: number
   paid: boolean
   pickup_date?: string
+  notes?: string
   created_at: string
   customers?: { name: string; phone: string }
 }
@@ -33,6 +39,12 @@ export function OrdersPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [search, setSearch] = useState('')
+
+  // Delete confirm dialog
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deletingOrder, setDeletingOrder] = useState<Order | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     loadOrders()
@@ -57,23 +69,54 @@ export function OrdersPage() {
     setIsLoading(false)
   }
 
-  const handleDeleteOrder = async (orderId: string, orderNumber: string) => {
-    if (!confirm(`Apakah Anda yakin ingin menghapus ${orderNumber}?`)) {
+  const filteredOrders = orders.filter(o => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    return (
+      o.order_number.toLowerCase().includes(q) ||
+      o.customers?.name?.toLowerCase().includes(q) ||
+      o.customers?.phone?.toLowerCase().includes(q) ||
+      o.status.toLowerCase().includes(q)
+    )
+  })
+
+  const handlePrintInvoice = (order: Order) => {
+    openInvoiceWindow(order)
+  }
+
+  const handleSendWhatsApp = (order: Order) => {
+    const url = getWhatsAppUrl(order)
+    if (!url) {
+      toast.error('Nomor pelanggan tidak tersedia')
       return
     }
+    window.open(url, '_blank')
+  }
 
+  const openDeleteDialog = (order: Order) => {
+    setDeletingOrder(order)
+    setDeleteOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deletingOrder) return
+    setIsDeleting(true)
     const supabase = createClient()
     const { error } = await supabase
       .from('orders')
       .delete()
-      .eq('id', orderId)
+      .eq('id', deletingOrder.id)
+
+    setIsDeleting(false)
+    setDeleteOpen(false)
+    setDeletingOrder(null)
 
     if (error) {
       toast.error('Gagal menghapus pesanan')
       return
     }
 
-    toast.success('Pesanan berhasil dihapus')
+    toast.success(`Pesanan ${deletingOrder.order_number} berhasil dihapus`)
     loadOrders()
   }
 
@@ -125,6 +168,27 @@ export function OrdersPage() {
         </Button>
       </div>
 
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+        <Input
+          placeholder="Cari no. pesanan, nama pelanggan, status..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="pl-9 max-w-md"
+        />
+      </div>
+
+      {/* Delete Confirm Dialog */}
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Hapus Pesanan"
+        message={`Yakin ingin menghapus ${deletingOrder?.order_number}?\nTindakan ini tidak bisa dibatalkan.`}
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+      />
+
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -157,21 +221,25 @@ export function OrdersPage() {
       </Dialog>
 
       {/* Orders list */}
-      {orders.length === 0 ? (
+      {filteredOrders.length === 0 ? (
         <Card>
           <CardContent className="py-12">
             <div className="text-center">
-              <p className="text-muted-foreground mb-4">Belum ada pesanan</p>
-              <Button onClick={() => setCreateOpen(true)} className="gap-2">
-                <Plus className="size-4" />
-                Buat Pesanan Pertama
-              </Button>
+              <p className="text-muted-foreground mb-4">
+                {search ? 'Pesanan tidak ditemukan' : 'Belum ada pesanan'}
+              </p>
+              {!search && (
+                <Button onClick={() => setCreateOpen(true)} className="gap-2">
+                  <Plus className="size-4" />
+                  Buat Pesanan Pertama
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-4">
-          {orders.map((order) => (
+          {filteredOrders.map((order) => (
             <Card key={order.id} className="transition-shadow hover:shadow-md">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
@@ -211,6 +279,24 @@ export function OrdersPage() {
 
                   <div className="flex gap-2 ml-4">
                     <Button
+                      onClick={() => handlePrintInvoice(order)}
+                      size="sm"
+                      variant="outline"
+                      className="gap-1"
+                    >
+                      <Printer className="size-3.5" />
+                      Invoice
+                    </Button>
+                    <Button
+                      onClick={() => handleSendWhatsApp(order)}
+                      size="sm"
+                      variant="outline"
+                      className="gap-1"
+                    >
+                      <MessageSquare className="size-3.5" />
+                      WA
+                    </Button>
+                    <Button
                       onClick={() => {
                         setSelectedOrder(order)
                         setEditOpen(true)
@@ -223,7 +309,7 @@ export function OrdersPage() {
                       Edit
                     </Button>
                     <Button
-                      onClick={() => handleDeleteOrder(order.id, order.order_number)}
+                      onClick={() => openDeleteDialog(order)}
                       size="sm"
                       variant="destructive"
                       className="gap-1"

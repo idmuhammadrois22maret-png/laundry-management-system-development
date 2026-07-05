@@ -166,21 +166,19 @@ export function OrderCreatePage({ onBack, onSuccess }: OrderCreatePageProps) {
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="pickup">Tanggal Pengambilan</Label>
-            <Input id="pickup" type="date" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="notes">Catatan</Label>
-            <textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Catatan pesanan..."
-              className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm min-h-20 resize-none"
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="pickup">Tanggal Pengambilan</Label>
+          <Input id="pickup" type="date" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="notes">Catatan</Label>
+          <textarea
+            id="notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Catatan pesanan..."
+            className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm min-h-20 resize-none"
+          />
         </div>
       </div>
 

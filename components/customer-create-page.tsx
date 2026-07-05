@@ -24,7 +24,7 @@ export function CustomerCreatePage({ onBack, onSuccess }: CustomerCreatePageProp
     postal_code: '',
   })
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
   }
@@ -75,7 +75,14 @@ export function CustomerCreatePage({ onBack, onSuccess }: CustomerCreatePageProp
         </div>
         <div className="md:col-span-2 space-y-2">
           <Label htmlFor="address">Alamat</Label>
-          <Input id="address" name="address" value={formData.address} onChange={handleChange} placeholder="Jl. Sudirman No. 123" />
+          <textarea
+            id="address"
+            name="address"
+            value={formData.address}
+            onChange={handleChange}
+            placeholder="Jl. Sudirman No. 123"
+            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="postal_code">Kode Pos</Label>

@@ -36,7 +36,7 @@ export function CustomerEditPage({ customer, onBack, onSuccess }: CustomerEditPa
     setFormData(customer)
   }, [customer])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
   }
@@ -174,12 +174,13 @@ export function CustomerEditPage({ customer, onBack, onSuccess }: CustomerEditPa
 
                   <div className="col-span-1 md:col-span-2 space-y-2">
                     <Label htmlFor="address">Alamat</Label>
-                    <Input
+                    <textarea
                       id="address"
                       name="address"
                       value={formData.address || ''}
                       onChange={handleChange}
                       placeholder="Jl. Sudirman No. 123"
+                      className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                     />
                   </div>
 

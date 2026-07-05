@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { ArrowRight, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useRouter } from 'next/navigation'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -28,6 +29,7 @@ function StatBadge({ label, value, delay }: { label: string; value: string; dela
 }
 
 export function HeroSection() {
+  const router = useRouter()
   return (
     <section className="relative overflow-hidden px-6 pt-32 pb-20 md:pt-40 md:pb-28">
       <div className="mx-auto max-w-7xl">
@@ -72,7 +74,7 @@ export function HeroSection() {
               animate="visible"
               className="mt-8 flex flex-wrap items-center gap-4"
             >
-              <Button size="lg" className="h-11 gap-2 bg-[#111827] px-6 text-white hover:bg-[#111827]/90">
+              <Button size="lg" className="h-11 gap-2 bg-[#111827] px-6 text-white hover:bg-[#111827]/90" onClick={() => router.push('/auth/login')}>
                 Coba Gratis
                 <ArrowRight className="h-4 w-4" />
               </Button>
@@ -80,6 +82,7 @@ export function HeroSection() {
                 variant="outline"
                 size="lg"
                 className="h-11 gap-2 border-border px-6 text-[#111827]"
+                onClick={() => router.push('/auth/login')}
               >
                 <Play className="h-4 w-4" />
                 Demo Langsung

@@ -18,6 +18,7 @@ interface OrderData {
   status: string
   total_amount: number
   paid: boolean
+  payment_method?: string
   created_at: string
   customers?: { name: string; phone: string }
 }
@@ -27,10 +28,10 @@ function StatsCard({ title, value, icon: Icon, bg, color, growth, growthColor }:
   growth?: string; growthColor?: string
 }) {
   return (
-    <div className="rounded-[24px] bg-muted/30 p-4 transition-all duration-300 hover:shadow-sm hover:-translate-y-0.5">
+    <div className="rounded-[24px] bg-muted/30 p-3 transition-all duration-300 hover:shadow-sm hover:-translate-y-0.5">
+          <p className="text-sm font-medium py-2 text-foreground">{title}</p>
       <div className="flex items-start justify-between rounded-xl bg-card p-5">
         <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">{title}</p>
           <p className="text-5xl font-bold tracking-tight text-foreground">{value}</p>
           {growth && <p className={`text-sm ${growthColor}`}>{growth}</p>}
         </div>
@@ -91,9 +92,14 @@ export function ReportsPage() {
       key: 'payment',
       label: 'Pembayaran',
       render: (o) => (
-        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${o.paid ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : 'bg-gray-50 text-gray-600 ring-gray-600/20'}`}>
-          {o.paid ? 'Lunas' : 'Belum'}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${o.paid ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : 'bg-gray-50 text-gray-600 ring-gray-600/20'}`}>
+            {o.paid ? 'Lunas' : 'Belum'}
+          </span>
+          {o.payment_method && (
+            <span className="text-xs text-muted-foreground">{o.payment_method.replace('_', ' ')}</span>
+          )}
+        </div>
       ),
     },
     {
@@ -130,7 +136,7 @@ export function ReportsPage() {
         })
       }
     } catch (error) {
-      console.error('[v0] Error loading report data:', error)
+      console.error('Error loading report data:', error)
     } finally {
       setIsLoading(false)
     }
@@ -157,7 +163,7 @@ export function ReportsPage() {
   const exportToPDF = () => {
     const doc = new jsPDF()
     doc.setFontSize(16)
-    doc.text('Laporan LaundryFlow', doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' })
+    doc.text('Laporan Laundry Management', doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' })
     doc.setFontSize(10)
     doc.text(`Dibuat: ${new Date().toLocaleDateString('id-ID')}`, doc.internal.pageSize.getWidth() / 2, 28, { align: 'center' })
     doc.setFontSize(12)

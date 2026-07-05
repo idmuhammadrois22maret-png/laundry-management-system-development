@@ -46,7 +46,7 @@ export function NotificationsPanel() {
 
       setNotifications(data || [])
     } catch (error) {
-      console.error('[v0] Error loading notifications:', error)
+      console.error('Error loading notifications:', error)
     } finally {
       setIsLoading(false)
     }
@@ -70,13 +70,13 @@ export function NotificationsPanel() {
       if (error) throw error
 
       // In a real app, this would call Twilio API or another service
-      console.log('[v0] Notification sent via WhatsApp:', formData)
+      console.log('Notification sent via WhatsApp:', formData)
 
       setFormData({ customer_id: '', message: '', notification_type: 'whatsapp' })
       setShowForm(false)
       loadNotifications()
     } catch (error) {
-      console.error('[v0] Error sending notification:', error)
+      console.error('Error sending notification:', error)
     }
   }
 
@@ -90,7 +90,7 @@ export function NotificationsPanel() {
       if (error) throw error
       loadNotifications()
     } catch (error) {
-      console.error('[v0] Error marking notification as sent:', error)
+      console.error('Error marking notification as sent:', error)
     }
   }
 

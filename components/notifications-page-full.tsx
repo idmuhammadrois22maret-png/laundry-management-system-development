@@ -31,10 +31,10 @@ function StatsCard({ title, value, icon: Icon, bg, color }: {
   title: string; value: string; icon: React.ElementType; bg: string; color: string
 }) {
   return (
-    <div className="rounded-[24px] bg-muted/30 p-4 transition-all duration-300 hover:shadow-sm hover:-translate-y-0.5">
+    <div className="rounded-[24px] bg-muted/30 p-3 transition-all duration-300 hover:shadow-sm hover:-translate-y-0.5">
+          <p className="text-sm font-medium py-2 text-foreground">{title}</p>
       <div className="flex items-start justify-between rounded-xl bg-card p-5">
         <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">{title}</p>
           <p className="text-5xl font-bold tracking-tight text-foreground">{value}</p>
         </div>
         <div className={`flex size-[60px] shrink-0 items-center justify-center rounded-xl ${bg}`}>

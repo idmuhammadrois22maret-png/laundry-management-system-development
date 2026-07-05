@@ -116,7 +116,7 @@ export function CustomersPage() {
     return (
       <div className="space-y-6 p-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[1,2,3,4].map(i => (
+          {[1, 2, 3, 4].map(i => (
             <div key={i} className="animate-pulse rounded-[24px] bg-muted/30 p-4">
               <div className="rounded-xl bg-card p-5 space-y-3">
                 <div className="h-4 w-24 bg-muted rounded" />
@@ -150,7 +150,7 @@ export function CustomersPage() {
           const Icon = s.icon
           return (
             <div key={s.title} className="rounded-[24px] bg-muted/30 p-2 transition-all duration-300 hover:shadow-sm hover:-translate-y-0.5">
-                  <p className="text-sm font-medium text-foreground font-bold p-2">{s.title}</p>
+              <p className="text-sm font-medium text-foreground font-bold p-2">{s.title}</p>
               <div className="flex items-center justify-between rounded-xl bg-card p-5">
                 <div className="space-y-1">
                   <p className="text-5xl font-bold tracking-tight text-foreground">{s.value}</p>
