@@ -1,7 +1,16 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
+import { Inter } from 'next/font/google'
 import { Toaster } from 'sonner'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { ThemeProvider } from '@/hooks/use-theme'
 import './globals.css'
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+})
 
 export const metadata: Metadata = {
   title: 'Laundry Business Management System',
@@ -40,9 +49,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-background">
-      <body className="antialiased">
-        {children}
+    <html lang="en" className="light" style={{ colorScheme: 'light' }}>
+      <body className={`antialiased ${inter.variable}`} style={{ fontFamily: 'var(--font-inter)' }}>
+        <TooltipProvider delayDuration={0}>
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
+        </TooltipProvider>
         <Toaster position="top-right" />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { FileDown, BarChart3, TrendingUp } from 'lucide-react'
+import { DataTable, type Column } from '@/components/data-table'
+import {
+  FileDown, BarChart3, TrendingUp, DollarSign, CheckCircle2, Clock,
+} from 'lucide-react'
 import jsPDF from 'jspdf'
 import Papa from 'papaparse'
+import { toast } from 'sonner'
 
 interface OrderData {
   id: string
@@ -17,6 +20,26 @@ interface OrderData {
   paid: boolean
   created_at: string
   customers?: { name: string; phone: string }
+}
+
+function StatsCard({ title, value, icon: Icon, bg, color, growth, growthColor }: {
+  title: string; value: string; icon: React.ElementType; bg: string; color: string
+  growth?: string; growthColor?: string
+}) {
+  return (
+    <div className="rounded-[24px] bg-muted/30 p-4 transition-all duration-300 hover:shadow-sm hover:-translate-y-0.5">
+      <div className="flex items-start justify-between rounded-xl bg-card p-5">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">{title}</p>
+          <p className="text-5xl font-bold tracking-tight text-foreground">{value}</p>
+          {growth && <p className={`text-sm ${growthColor}`}>{growth}</p>}
+        </div>
+        <div className={`flex size-[60px] shrink-0 items-center justify-center rounded-xl ${bg}`}>
+          <Icon className={`size-6 ${color}`} />
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export function ReportsPage() {
@@ -30,37 +53,79 @@ export function ReportsPage() {
     pendingAmount: 0,
   })
 
+  const reportColumns: Column<OrderData>[] = [
+    {
+      key: 'order_number',
+      label: 'Pesanan',
+      render: (o) => <span className="font-mono text-xs text-muted-foreground">{o.order_number}</span>,
+    },
+    {
+      key: 'customer',
+      label: 'Pelanggan',
+      render: (o) => <span className="font-medium">{o.customers?.name || 'N/A'}</span>,
+    },
+    {
+      key: 'amount',
+      label: 'Jumlah',
+      align: 'right',
+      render: (o) => <span>Rp {o.total_amount.toLocaleString('id-ID')}</span>,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (o) => {
+        const colors: Record<string, string> = {
+          pending: 'bg-amber-50 text-amber-700 ring-amber-600/20',
+          in_progress: 'bg-blue-50 text-blue-700 ring-blue-600/20',
+          ready: 'bg-purple-50 text-purple-700 ring-purple-600/20',
+          completed: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
+        }
+        return (
+          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${colors[o.status] || 'bg-red-50 text-red-700 ring-red-600/20'}`}>
+            {o.status.replace(/_/g, ' ')}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'payment',
+      label: 'Pembayaran',
+      render: (o) => (
+        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${o.paid ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : 'bg-gray-50 text-gray-600 ring-gray-600/20'}`}>
+          {o.paid ? 'Lunas' : 'Belum'}
+        </span>
+      ),
+    },
+    {
+      key: 'date',
+      label: 'Tanggal',
+      align: 'right',
+      render: (o) => <span className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleDateString('id-ID')}</span>,
+    },
+  ]
+
   const supabase = createClient()
 
-  useEffect(() => {
-    loadReportData()
-  }, [])
+  useEffect(() => { loadReportData() }, [])
 
   const loadReportData = async () => {
     try {
       const { data: ordersData } = await supabase
-        .from('orders')
-        .select('*, customers(name, phone)')
-        .order('created_at', { ascending: false })
+        .from('orders').select('*, customers(name, phone)').order('created_at', { ascending: false })
 
       setOrders(ordersData || [])
 
-      // Calculate report metrics
       if (ordersData && ordersData.length > 0) {
         const completed = ordersData.filter(o => o.status === 'completed').length
-        const totalRevenue = ordersData
-          .filter(o => o.paid)
-          .reduce((sum, o) => sum + (o.total_amount || 0), 0)
-        const pendingAmount = ordersData
-          .filter(o => !o.paid)
-          .reduce((sum, o) => sum + (o.total_amount || 0), 0)
+        const totalRevenue = ordersData.filter(o => o.paid).reduce((sum, o) => sum + (o.total_amount || 0), 0)
+        const pendingAmount = ordersData.filter(o => !o.paid).reduce((sum, o) => sum + (o.total_amount || 0), 0)
 
         setReportData({
           totalOrders: ordersData.length,
           completedOrders: completed,
           totalRevenue,
-          averageOrderValue: ordersData.length > 0 ? 
-            ordersData.reduce((sum, o) => sum + (o.total_amount || 0), 0) / ordersData.length : 0,
+          averageOrderValue: ordersData.length > 0
+            ? ordersData.reduce((sum, o) => sum + (o.total_amount || 0), 0) / ordersData.length : 0,
           pendingAmount,
         })
       }
@@ -81,224 +146,86 @@ export function ReportsPage() {
       'Paid': order.paid ? 'Yes' : 'No',
       'Date': new Date(order.created_at).toLocaleDateString('id-ID'),
     }))
-
     const csv = Papa.unparse(csvData)
-    const element = document.createElement('a')
-    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(csv))
-    element.setAttribute('download', `laundry_orders_${new Date().toISOString().split('T')[0]}.csv`)
-    element.style.display = 'none'
-    document.body.appendChild(element)
-    element.click()
-    document.body.removeChild(element)
+    const el = document.createElement('a')
+    el.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(csv))
+    el.setAttribute('download', `laundry_orders_${new Date().toISOString().split('T')[0]}.csv`)
+    el.click()
+    toast.success('CSV berhasil diexport')
   }
 
   const exportToPDF = () => {
     const doc = new jsPDF()
-    const pageWidth = doc.internal.pageSize.getWidth()
-    const pageHeight = doc.internal.pageSize.getHeight()
-    let yPosition = 20
-
-    // Title
     doc.setFontSize(16)
-    doc.text('Laundry Business Report', pageWidth / 2, yPosition, { align: 'center' })
-    yPosition += 15
-
-    // Report Date
+    doc.text('Laporan LaundryFlow', doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' })
     doc.setFontSize(10)
-    doc.text(`Report Generated: ${new Date().toLocaleDateString('id-ID')}`, pageWidth / 2, yPosition, { align: 'center' })
-    yPosition += 15
-
-    // Summary Section
+    doc.text(`Dibuat: ${new Date().toLocaleDateString('id-ID')}`, doc.internal.pageSize.getWidth() / 2, 28, { align: 'center' })
     doc.setFontSize(12)
-    doc.text('Summary', 20, yPosition)
-    yPosition += 10
-
+    doc.text('Ringkasan', 20, 40)
     doc.setFontSize(10)
-    const summaryData = [
-      `Total Orders: ${reportData.totalOrders}`,
-      `Completed Orders: ${reportData.completedOrders}`,
-      `Total Revenue: Rp ${(reportData.totalRevenue / 1000000).toFixed(2)}M`,
-      `Average Order Value: Rp ${(reportData.averageOrderValue / 1000).toFixed(0)}K`,
-      `Pending Amount: Rp ${(reportData.pendingAmount / 1000000).toFixed(2)}M`,
+    const items = [
+      `Total Pesanan: ${reportData.totalOrders}`,
+      `Selesai: ${reportData.completedOrders}`,
+      `Pendapatan: Rp ${(reportData.totalRevenue / 1000000).toFixed(2)}M`,
+      `Rata-rata: Rp ${(reportData.averageOrderValue / 1000).toFixed(0)}K`,
+      `Belum Dibayar: Rp ${(reportData.pendingAmount / 1000000).toFixed(2)}M`,
     ]
+    items.forEach((item, i) => doc.text(item, 20, 52 + i * 8))
 
-    summaryData.forEach(item => {
-      doc.text(item, 20, yPosition)
-      yPosition += 8
-    })
-
-    yPosition += 10
-
-    // Orders Table
-    doc.setFontSize(12)
-    doc.text('Orders List', 20, yPosition)
-    yPosition += 10
-
-    const tableData = orders.slice(0, 20).map(order => [
-      order.order_number,
-      order.customers?.name || 'N/A',
-      `Rp ${(order.total_amount / 1000).toFixed(0)}K`,
-      order.status,
-      order.paid ? 'Yes' : 'No',
-    ])
-
-    doc.setFontSize(9)
-    doc.autoTable({
-      head: [['Order #', 'Customer', 'Amount', 'Status', 'Paid']],
-      body: tableData,
-      startY: yPosition,
-      margin: { left: 20, right: 20 },
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [66, 135, 245] },
-    })
-
-    const filename = `laundry_report_${new Date().toISOString().split('T')[0]}.pdf`
-    doc.save(filename)
+    doc.save(`laporan_laundry_${new Date().toISOString().split('T')[0]}.pdf`)
+    toast.success('PDF berhasil diexport')
   }
 
   if (isLoading) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="text-muted-foreground">Loading reports...</p>
+      <div className="space-y-6 p-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1,2,3,4].map(i => (
+            <div key={i} className="animate-pulse rounded-[24px] bg-muted/30 p-4">
+              <div className="rounded-xl bg-card p-5 space-y-3">
+                <div className="h-4 w-24 bg-muted rounded" />
+                <div className="h-10 w-20 bg-muted rounded" />
+              </div>
+            </div>
+          ))}
         </div>
+        <div className="animate-pulse h-64 bg-muted rounded-xl" />
       </div>
     )
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Reports & Analytics</h1>
+    <div className="space-y-8 p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Laporan</h1>
+          <p className="text-sm text-muted-foreground mt-1">Analitik dan export data bisnis Anda</p>
+        </div>
         <div className="flex gap-2">
           <Button onClick={exportToCSV} variant="outline" className="gap-2">
-            <FileDown className="w-4 h-4" />
-            Export CSV
+            <FileDown className="size-4" /> CSV
           </Button>
           <Button onClick={exportToPDF} className="gap-2">
-            <FileDown className="w-4 h-4" />
-            Export PDF
+            <FileDown className="size-4" /> PDF
           </Button>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <BarChart3 className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{reportData.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">All orders</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <TrendingUp className="w-4 h-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{reportData.completedOrders}</div>
-            <p className="text-xs text-muted-foreground">Finished orders</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <FileDown className="w-4 h-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">Rp {(reportData.totalRevenue / 1000000).toFixed(1)}M</div>
-            <p className="text-xs text-muted-foreground">Paid orders</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Order</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Rp {(reportData.averageOrderValue / 1000).toFixed(0)}K</div>
-            <p className="text-xs text-muted-foreground">Average value</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">Rp {(reportData.pendingAmount / 1000000).toFixed(1)}M</div>
-            <p className="text-xs text-muted-foreground">Unpaid amount</p>
-          </CardContent>
-        </Card>
+      {/* Stats */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatsCard title="Total Pesanan" value={reportData.totalOrders.toString()} icon={BarChart3} bg="bg-blue-50" color="text-blue-600" growth="All time" growthColor="text-muted-foreground" />
+        <StatsCard title="Selesai" value={reportData.completedOrders.toString()} icon={CheckCircle2} bg="bg-emerald-50" color="text-emerald-600" growth={`${reportData.totalOrders > 0 ? ((reportData.completedOrders / reportData.totalOrders) * 100).toFixed(0) : 0}% completion`} growthColor="text-green-600" />
+        <StatsCard title="Pendapatan" value={`Rp ${(reportData.totalRevenue / 1000000).toFixed(1)}M`} icon={DollarSign} bg="bg-lime-50" color="text-lime-600" />
+        <StatsCard title="Belum Dibayar" value={`Rp ${(reportData.pendingAmount / 1000000).toFixed(1)}M`} icon={Clock} bg="bg-rose-50" color="text-rose-600" />
       </div>
 
-      {/* Orders Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Order Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 font-semibold">Order #</th>
-                  <th className="text-left py-3 px-4 font-semibold">Customer</th>
-                  <th className="text-left py-3 px-4 font-semibold">Amount</th>
-                  <th className="text-left py-3 px-4 font-semibold">Status</th>
-                  <th className="text-left py-3 px-4 font-semibold">Payment</th>
-                  <th className="text-left py-3 px-4 font-semibold">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-8 text-muted-foreground">
-                      No orders to report
-                    </td>
-                  </tr>
-                ) : (
-                  orders.map((order) => (
-                    <tr key={order.id} className="border-b border-border hover:bg-muted/50">
-                      <td className="py-3 px-4 font-mono text-xs">{order.order_number}</td>
-                      <td className="py-3 px-4">{order.customers?.name || 'N/A'}</td>
-                      <td className="py-3 px-4">Rp {(order.total_amount / 1000).toFixed(0)}K</td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                          order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          order.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                          order.status === 'ready' ? 'bg-purple-100 text-purple-800' :
-                          order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                          order.paid ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {order.paid ? 'Paid' : 'Unpaid'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-xs">
-                        {new Date(order.created_at).toLocaleDateString('id-ID')}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Table */}
+      <DataTable
+        title="Detail Pesanan"
+        columns={reportColumns}
+        data={orders}
+        emptyMessage="Belum ada data"
+      />
     </div>
   )
 }

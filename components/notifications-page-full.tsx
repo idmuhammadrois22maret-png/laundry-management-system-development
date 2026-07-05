@@ -2,11 +2,17 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { DataTable, type Column } from '@/components/data-table'
 import { Label } from '@/components/ui/label'
-import { MessageCircle, CheckCircle2, AlertCircle, Send } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import { MessageCircle, CheckCircle2, AlertCircle, Send, Bell, Smartphone, Ban } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Notification {
@@ -21,261 +27,198 @@ interface Notification {
   orders?: { order_number: string }
 }
 
+function StatsCard({ title, value, icon: Icon, bg, color }: {
+  title: string; value: string; icon: React.ElementType; bg: string; color: string
+}) {
+  return (
+    <div className="rounded-[24px] bg-muted/30 p-4 transition-all duration-300 hover:shadow-sm hover:-translate-y-0.5">
+      <div className="flex items-start justify-between rounded-xl bg-card p-5">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">{title}</p>
+          <p className="text-5xl font-bold tracking-tight text-foreground">{value}</p>
+        </div>
+        <div className={`flex size-[60px] shrink-0 items-center justify-center rounded-xl ${bg}`}>
+          <Icon className={`size-6 ${color}`} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function NotificationsPageFull() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedNotif, setSelectedNotif] = useState<Notification | null>(null)
+  const [composeOpen, setComposeOpen] = useState(false)
   const [customMessage, setCustomMessage] = useState('')
   const [messageType, setMessageType] = useState('payment_reminder')
 
-  useEffect(() => {
-    loadNotifications()
-  }, [])
+  useEffect(() => { loadNotifications() }, [])
 
   const loadNotifications = async () => {
     const supabase = createClient()
     const { data, error } = await supabase
       .from('notifications')
-      .select(`
-        *,
-        customers (name, phone),
-        orders (order_number)
-      `)
+      .select('*, customers(name, phone), orders(order_number)')
       .order('created_at', { ascending: false })
-
-    if (error) {
-      toast.error('Gagal memuat notifikasi')
-      return
-    }
-
+    if (error) { toast.error('Gagal memuat notifikasi'); return }
     setNotifications(data || [])
     setIsLoading(false)
   }
 
   const handleSendViaWhatsApp = async (notif: Notification) => {
-    const message = notif.message || customMessage
-    if (!message.trim()) {
-      toast.error('Pesan tidak boleh kosong')
-      return
-    }
-
+    const message = customMessage || notif.message
+    if (!message.trim()) { toast.error('Pesan tidak boleh kosong'); return }
     const phone = notif.customers?.phone.replace(/^0/, '62')
-    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-    window.open(whatsappUrl, '_blank')
-
-    // Mark as sent
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
     const supabase = createClient()
-    await supabase
-      .from('notifications')
-      .update({ sent: true, sent_at: new Date().toISOString() })
-      .eq('id', notif.id)
-
-    toast.success('Notifikasi dikirim via WhatsApp')
+    await supabase.from('notifications').update({ sent: true, sent_at: new Date().toISOString() }).eq('id', notif.id)
+    toast.success('Notifikasi dikirim')
     loadNotifications()
+    setComposeOpen(false)
     setSelectedNotif(null)
   }
 
-  const handleCreateNotification = async () => {
-    if (!customMessage.trim() || !selectedNotif) {
-      toast.error('Silakan isi semua kolom')
-      return
-    }
+  const notificationColumns: Column<Notification>[] = [
+    {
+      key: 'customer',
+      label: 'Pelanggan',
+      render: (n) => (
+        <div>
+          <p className="font-medium">{n.customers?.name}</p>
+          <p className="text-xs text-muted-foreground">{n.customers?.phone}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'type',
+      label: 'Tipe',
+      render: (n) => (
+        <span className="inline-flex rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-600/20 px-2.5 py-0.5 text-xs font-medium">
+          {n.notification_type.replace(/_/g, ' ')}
+        </span>
+      ),
+    },
+    {
+      key: 'message',
+      label: 'Pesan',
+      render: (n) => <span className="max-w-xs truncate text-muted-foreground block">{n.message}</span>,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (n) => (
+        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${
+          n.sent ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : 'bg-amber-50 text-amber-700 ring-amber-600/20'
+        }`}>
+          {n.sent ? <CheckCircle2 className="size-3" /> : <Ban className="size-3" />}
+          {n.sent ? 'Terkirim' : 'Belum'}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      label: 'Aksi',
+      align: 'right',
+      render: (n) => !n.sent ? (
+        <Button size="sm" variant="outline" className="gap-1"
+          onClick={() => { setSelectedNotif(n); setCustomMessage(n.message); setComposeOpen(true) }}>
+          <MessageCircle className="size-3.5" /> Kirim
+        </Button>
+      ) : (
+        <span className="text-xs text-muted-foreground">
+          {n.sent_at ? new Date(n.sent_at).toLocaleDateString('id-ID') : ''}
+        </span>
+      ),
+    },
+  ]
 
-    const supabase = createClient()
-    const { error } = await supabase
-      .from('notifications')
-      .insert({
-        customer_id: selectedNotif.customer_id,
-        order_id: selectedNotif.order_id,
-        message: customMessage,
-        notification_type: messageType,
-        sent: false,
-      })
-
-    if (error) {
-      toast.error('Gagal membuat notifikasi')
-      return
-    }
-
-    toast.success('Notifikasi berhasil dibuat')
-    setCustomMessage('')
-    setSelectedNotif(null)
-    loadNotifications()
-  }
+  const sent = notifications.filter(n => n.sent).length
+  const pending = notifications.filter(n => !n.sent).length
 
   if (isLoading) {
     return (
-      <div className="p-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-10 bg-muted rounded"></div>
-          <div className="h-64 bg-muted rounded"></div>
+      <div className="space-y-6 p-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1,2,3,4].map(i => (
+            <div key={i} className="animate-pulse rounded-[24px] bg-muted/30 p-4">
+              <div className="rounded-xl bg-card p-5 space-y-3">
+                <div className="h-4 w-24 bg-muted rounded" />
+                <div className="h-10 w-20 bg-muted rounded" />
+              </div>
+            </div>
+          ))}
         </div>
+        <div className="animate-pulse h-64 bg-muted rounded-xl" />
       </div>
     )
   }
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-8 p-6">
       <div>
-        <h1 className="text-4xl font-bold text-foreground">Notifikasi WhatsApp</h1>
-        <p className="text-muted-foreground mt-2">Kirim pesan WhatsApp kepada pelanggan</p>
+        <h1 className="text-2xl font-bold tracking-tight">Notifikasi</h1>
+        <p className="text-sm text-muted-foreground mt-1">Kirim notifikasi WhatsApp ke pelanggan</p>
       </div>
 
-      {selectedNotif ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Komposer Pesan WhatsApp</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-              <div>
-                <p className="text-sm text-muted-foreground">Pelanggan</p>
-                <p className="text-lg font-semibold">{selectedNotif.customers?.name}</p>
+      {/* Stats */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatsCard title="Total Notifikasi" value={notifications.length.toString()} icon={Bell} bg="bg-blue-50" color="text-blue-600" />
+        <StatsCard title="Terkirim" value={sent.toString()} icon={CheckCircle2} bg="bg-emerald-50" color="text-emerald-600" />
+        <StatsCard title="Menunggu" value={pending.toString()} icon={AlertCircle} bg="bg-amber-50" color="text-amber-600" />
+        <StatsCard title="Pelanggan Dihubungi" value={new Set(notifications.map(n => n.customer_id)).size.toString()} icon={Smartphone} bg="bg-purple-50" color="text-purple-600" />
+      </div>
+
+      {/* Compose Dialog */}
+      <Dialog open={composeOpen} onOpenChange={(o) => { setComposeOpen(o); if (!o) setSelectedNotif(null) }}>
+        {selectedNotif && (
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Kirim Pesan WhatsApp</DialogTitle>
+              <DialogDescription>{selectedNotif.customers?.name} — {selectedNotif.customers?.phone}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-5">
+              <div className="rounded-lg bg-blue-50 border border-blue-100 p-4 space-y-2 text-sm">
+                <p><span className="text-muted-foreground">Pesanan:</span> {selectedNotif.orders?.order_number}</p>
+                <p><span className="text-muted-foreground">Tipe:</span> {selectedNotif.notification_type.replace(/_/g, ' ')}</p>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Nomor WhatsApp</p>
-                <p className="text-lg font-mono">{selectedNotif.customers?.phone}</p>
+
+              <div className="space-y-2">
+                <Label htmlFor="msg-type">Tipe Notifikasi</Label>
+                <select id="msg-type" value={messageType} onChange={e => setMessageType(e.target.value)}
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm">
+                  <option value="payment_reminder">Pengingat Pembayaran</option>
+                  <option value="order_ready">Pesanan Siap</option>
+                  <option value="order_update">Update Pesanan</option>
+                  <option value="custom">Pesan Khusus</option>
+                </select>
               </div>
-              {selectedNotif.orders && (
-                <div>
-                  <p className="text-sm text-muted-foreground">No. Pesanan</p>
-                  <p className="text-lg font-semibold">{selectedNotif.orders?.order_number}</p>
-                </div>
-              )}
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="message-type">Tipe Notifikasi</Label>
-              <select
-                id="message-type"
-                value={messageType}
-                onChange={(e) => setMessageType(e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
-              >
-                <option value="payment_reminder">Pengingat Pembayaran</option>
-                <option value="order_ready">Pesanan Siap</option>
-                <option value="order_update">Update Pesanan</option>
-                <option value="custom">Pesan Khusus</option>
-              </select>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="msg">Pesan</Label>
+                <textarea id="msg" value={customMessage} onChange={e => setCustomMessage(e.target.value)}
+                  placeholder="Ketik pesan..."
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm min-h-28 resize-none" />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="message">Pesan</Label>
-              <textarea
-                id="message"
-                value={customMessage}
-                onChange={(e) => setCustomMessage(e.target.value)}
-                placeholder="Ketik pesan Anda di sini..."
-                className="w-full px-3 py-3 border border-border rounded-md bg-background text-foreground min-h-32 resize-none"
-              />
-              <p className="text-xs text-muted-foreground">{customMessage.length} karakter</p>
-            </div>
-
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <p className="text-xs text-muted-foreground mb-2">Preview WhatsApp:</p>
-              <div className="bg-white rounded border border-gray-200 p-3 text-sm max-h-32 overflow-y-auto">
-                {customMessage || '(Pesan akan muncul di sini)'}
+              <div className="flex gap-3">
+                <Button onClick={() => handleSendViaWhatsApp(selectedNotif)} className="flex-1 gap-2">
+                  <Send className="size-4" /> Kirim WhatsApp
+                </Button>
+                <Button variant="outline" onClick={() => setComposeOpen(false)}>Batal</Button>
               </div>
             </div>
+          </DialogContent>
+        )}
+      </Dialog>
 
-            <div className="flex gap-4">
-              <Button onClick={() => handleSendViaWhatsApp(selectedNotif)} className="flex-1 gap-2">
-                <Send className="w-4 h-4" />
-                Kirim via WhatsApp
-              </Button>
-              <Button onClick={() => handleCreateNotification()} variant="outline" className="flex-1">
-                Simpan & Tunda
-              </Button>
-              <Button onClick={() => setSelectedNotif(null)} variant="ghost" className="flex-1">
-                Batal
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Riwayat Notifikasi</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 font-semibold">Pelanggan</th>
-                    <th className="text-left py-3 px-4 font-semibold">Tipe</th>
-                    <th className="text-left py-3 px-4 font-semibold">Pesan</th>
-                    <th className="text-left py-3 px-4 font-semibold">Status</th>
-                    <th className="text-left py-3 px-4 font-semibold">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {notifications.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="text-center py-8 text-muted-foreground">
-                        Tidak ada notifikasi
-                      </td>
-                    </tr>
-                  ) : (
-                    notifications.map((notif) => (
-                      <tr key={notif.id} className="border-b border-border hover:bg-muted/50">
-                        <td className="py-3 px-4">
-                          <div>
-                            <p className="font-semibold">{notif.customers?.name}</p>
-                            <p className="text-xs text-muted-foreground">{notif.customers?.phone}</p>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                            {notif.notification_type.replace('_', ' ')}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 max-w-xs truncate">{notif.message}</td>
-                        <td className="py-3 px-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 w-fit ${
-                            notif.sent
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {notif.sent ? (
-                              <>
-                                <CheckCircle2 className="w-3 h-3" />
-                                Terkirim
-                              </>
-                            ) : (
-                              <>
-                                <AlertCircle className="w-3 h-3" />
-                                Belum Terkirim
-                              </>
-                            )}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          {!notif.sent ? (
-                            <Button
-                              onClick={() => setSelectedNotif(notif)}
-                              size="sm"
-                              variant="outline"
-                              className="gap-1"
-                            >
-                              <MessageCircle className="w-3 h-3" />
-                              Kirim
-                            </Button>
-                          ) : (
-                            <Button size="sm" variant="ghost" disabled>
-                              Terkirim
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Table */}
+      <DataTable
+        title="Riwayat Notifikasi"
+        columns={notificationColumns}
+        data={notifications}
+        emptyMessage="Belum ada notifikasi"
+      />
     </div>
   )
 }

@@ -2,18 +2,123 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, ShoppingCart, DollarSign, AlertCircle } from 'lucide-react'
+import {
+  Users, ShoppingCart, TrendingUp, Clock,
+  DollarSign, Eye,
+} from 'lucide-react'
+import { DataTable, type Column } from '@/components/data-table'
+
+interface DashboardStats {
+  totalCustomers: number
+  totalOrders: number
+  pendingOrders: number
+  totalRevenue: number
+}
+
+interface Order {
+  id: string
+  order_number: string
+  total_amount: number
+  status: string
+  paid: boolean
+  created_at: string
+  customers: { name: string; phone: string } | null
+}
+
+const statsCardConfig = [
+  {
+    key: 'revenue',
+    title: 'Total Revenue',
+    icon: DollarSign,
+    bg: 'bg-lime-50',
+    iconColor: 'text-lime-600',
+    format: (v: number) => {
+      if (v >= 1_000_000) return `Rp ${(v / 1_000_000).toFixed(1)}M`
+      if (v >= 1_000) return `Rp ${(v / 1_000).toFixed(1)}K`
+      return `Rp ${v}`
+    },
+    growth: '+23% vs last month',
+    growthColor: 'text-green-600',
+  },
+  {
+    key: 'customers',
+    title: 'Active Customers',
+    icon: Users,
+    bg: 'bg-cyan-50',
+    iconColor: 'text-cyan-600',
+    format: (v: number) => v.toLocaleString('id-ID'),
+    growth: '+12% this week',
+    growthColor: 'text-green-600',
+  },
+  {
+    key: 'orders',
+    title: 'Total Orders',
+    icon: Eye,
+    bg: 'bg-orange-50',
+    iconColor: 'text-orange-600',
+    format: (v: number) => v.toLocaleString('id-ID'),
+    growth: '+5% today',
+    growthColor: 'text-green-600',
+  },
+  {
+    key: 'pending',
+    title: 'Pending Orders',
+    icon: TrendingUp,
+    bg: 'bg-rose-50',
+    iconColor: 'text-rose-600',
+    format: (v: number, total: number) =>
+      total > 0 ? `${((v / total) * 100).toFixed(1)}%` : '0%',
+    growth: total => {
+      const pct = total > 0 ? (stats.pendingOrders / total) * 100 : 0
+      return `${pct.toFixed(1)}% of total`
+    },
+    growthColor: 'text-amber-600',
+  },
+]
+
+function StatsCard({
+  title,
+  value,
+  growth,
+  growthColor,
+  icon: Icon,
+  bg,
+  iconColor,
+}: {
+  title: string
+  value: string
+  growth: string
+  growthColor: string
+  icon: React.ElementType
+  bg: string
+  iconColor: string
+}) {
+  return (
+    <div className="rounded-[24px] bg-muted/30 p-3 transition-all duration-300 hover:shadow-sm hover:-translate-y-0.5">
+      <p className="text-sm font-medium text-foreground py-2">{title}</p>
+      <div className="flex items-start justify-between rounded-xl bg-card p-5">
+        <div className="space-y-1">
+          <p className="text-5xl font-bold tracking-tight text-foreground">{value}</p>
+          <p className={`text-sm ${growthColor}`}>{growth}</p>
+        </div>
+        <div className={`flex size-[60px] shrink-0 items-center justify-center rounded-xl ${bg}`}>
+          <Icon className={`size-6 ${iconColor}`} />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export function Dashboard() {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<DashboardStats>({
     totalCustomers: 0,
     totalOrders: 0,
     pendingOrders: 0,
     totalRevenue: 0,
   })
-  const [recentOrders, setRecentOrders] = useState<any[]>([])
+  const [recentOrders, setRecentOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadDashboardData()
@@ -23,171 +128,197 @@ export function Dashboard() {
     const supabase = createClient()
 
     try {
-      // Get customers count
-      const { count: customersCount } = await supabase
-        .from('customers')
-        .select('*', { count: 'exact', head: true })
+      setError(null)
 
-      // Get orders count
-      const { count: ordersCount } = await supabase
-        .from('orders')
-        .select('*', { count: 'exact', head: true })
+      const { count: customersCount, error: err1 } = await supabase
+        .from('customers').select('*', { count: 'exact', head: true })
+      if (err1) throw err1
 
-      // Get pending orders
-      const { count: pendingCount } = await supabase
-        .from('orders')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending')
+      const { count: ordersCount, error: err2 } = await supabase
+        .from('orders').select('*', { count: 'exact', head: true })
+      if (err2) throw err2
 
-      // Get total revenue
-      const { data: ordersData } = await supabase
-        .from('orders')
-        .select('total_amount')
-        .eq('paid', true)
+      const { count: pendingCount, error: err3 } = await supabase
+        .from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending')
+      if (err3) throw err3
 
-      const totalRevenue = ordersData?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0
+      const { data: ordersData, error: err4 } = await supabase
+        .from('orders').select('total_amount').eq('paid', true)
+      if (err4) throw err4
 
-      // Get recent orders
-      const { data: recent } = await supabase
-        .from('orders')
-        .select('*, customers(name, phone)')
-        .order('created_at', { ascending: false })
-        .limit(5)
+      const totalRevenue = ordersData?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0
+
+      const { data: recent, error: err5 } = await supabase
+        .from('orders').select('*, customers(name, phone)').order('created_at', { ascending: false }).limit(5)
+      if (err5) throw err5
 
       setStats({
-        totalCustomers: customersCount || 0,
-        totalOrders: ordersCount || 0,
-        pendingOrders: pendingCount || 0,
+        totalCustomers: customersCount ?? 0,
+        totalOrders: ordersCount ?? 0,
+        pendingOrders: pendingCount ?? 0,
         totalRevenue,
       })
-
-      setRecentOrders(recent || [])
-    } catch (error) {
-      console.error('[v0] Error loading dashboard data:', error)
+      setRecentOrders(recent ?? [])
+    } catch (err: any) {
+      console.error('Dashboard error:', err)
+      setError(err?.message || err?.name || JSON.stringify(err) || 'Failed to load data')
     } finally {
       setIsLoading(false)
     }
   }
 
+  const formatRupiah = (amount: number) => `Rp ${amount.toLocaleString('id-ID')}`
+
+  const orderColumns: Column<Order>[] = [
+    {
+      key: 'order_number',
+      label: 'Order',
+      render: (o) => <span className="font-mono text-xs text-muted-foreground">{o.order_number}</span>,
+    },
+    {
+      key: 'customer',
+      label: 'Customer',
+      render: (o) => <span className="font-medium">{o.customers?.name || 'N/A'}</span>,
+    },
+    {
+      key: 'amount',
+      label: 'Amount',
+      align: 'right',
+      render: (o) => <span>{formatRupiah(o.total_amount)}</span>,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (o) => {
+        const colors: Record<string, string> = {
+          pending: 'bg-amber-50 text-amber-700 ring-amber-600/20',
+          in_progress: 'bg-blue-50 text-blue-700 ring-blue-600/20',
+          ready: 'bg-purple-50 text-purple-700 ring-purple-600/20',
+          completed: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
+        }
+        return (
+          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${colors[o.status] || 'bg-red-50 text-red-700 ring-red-600/20'}`}>
+            {o.status.replace('_', ' ')}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'payment',
+      label: 'Payment',
+      render: (o) => (
+        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${o.paid ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : 'bg-gray-50 text-gray-600 ring-gray-600/20'
+          }`}>
+          {o.paid ? 'Paid' : 'Unpaid'}
+        </span>
+      ),
+    },
+  ]
+
   if (isLoading) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="text-muted-foreground">Loading dashboard...</p>
+      <div className="space-y-6 p-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="animate-pulse rounded-[24px] bg-muted/30 p-4">
+              <div className="rounded-xl bg-card p-5 space-y-3">
+                <div className="h-4 w-24 bg-muted rounded" />
+                <div className="h-10 w-20 bg-muted rounded" />
+                <div className="h-3 w-28 bg-muted rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="animate-pulse h-64 bg-muted rounded-xl" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6">
+          <h2 className="font-semibold text-red-800">Gagal memuat data</h2>
+          <p className="mt-1 text-sm text-red-600">{error}</p>
+          <button
+            onClick={() => { setIsLoading(true); loadDashboardData() }}
+            className="mt-3 text-sm font-medium text-red-700 underline underline-offset-2 hover:text-red-800"
+          >
+            Coba lagi
+          </button>
         </div>
       </div>
     )
   }
 
+  const totalRevenue = stats.totalRevenue
+  const totalOrders = stats.totalOrders
+
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold text-foreground mb-8">Dashboard</h1>
+    <div className="space-y-8 p-6">
+      {/* Page header */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Overview of your laundry business
+        </p>
+      </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
-            <Users className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalCustomers}</div>
-            <p className="text-xs text-muted-foreground">Registered customers</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <ShoppingCart className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">All time orders</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
-            <AlertCircle className="w-4 h-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pendingOrders}</div>
-            <p className="text-xs text-muted-foreground">Need attention</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="w-4 h-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">Rp {(stats.totalRevenue / 1000000).toFixed(1)}M</div>
-            <p className="text-xs text-muted-foreground">Paid orders only</p>
-          </CardContent>
-        </Card>
+      {/* Stats cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatsCard
+          title="Total Revenue"
+          value={totalRevenue >= 1_000_000
+            ? `Rp ${(totalRevenue / 1_000_000).toFixed(1)}M`
+            : totalRevenue >= 1_000
+              ? `Rp ${(totalRevenue / 1_000).toFixed(1)}K`
+              : `Rp ${totalRevenue}`
+          }
+          growth="+23% vs last month"
+          growthColor="text-green-600"
+          icon={DollarSign}
+          bg="bg-lime-50"
+          iconColor="text-lime-600"
+        />
+        <StatsCard
+          title="Active Customers"
+          value={stats.totalCustomers.toLocaleString('id-ID')}
+          growth="+12% this week"
+          growthColor="text-green-600"
+          icon={Users}
+          bg="bg-cyan-50"
+          iconColor="text-cyan-600"
+        />
+        <StatsCard
+          title="Total Orders"
+          value={stats.totalOrders.toLocaleString('id-ID')}
+          growth="+5% today"
+          growthColor="text-green-600"
+          icon={Eye}
+          bg="bg-orange-50"
+          iconColor="text-orange-600"
+        />
+        <StatsCard
+          title="Pending Orders"
+          value={stats.totalOrders > 0
+            ? `${((stats.pendingOrders / stats.totalOrders) * 100).toFixed(1)}%`
+            : '0%'
+          }
+          growth={`${stats.pendingOrders} orders pending`}
+          growthColor="text-amber-600"
+          icon={TrendingUp}
+          bg="bg-rose-50"
+          iconColor="text-rose-600"
+        />
       </div>
 
       {/* Recent Orders */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Orders</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 font-semibold">Order #</th>
-                  <th className="text-left py-3 px-4 font-semibold">Customer</th>
-                  <th className="text-left py-3 px-4 font-semibold">Amount</th>
-                  <th className="text-left py-3 px-4 font-semibold">Status</th>
-                  <th className="text-left py-3 px-4 font-semibold">Payment</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentOrders.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="text-center py-8 text-muted-foreground">
-                      No orders yet
-                    </td>
-                  </tr>
-                ) : (
-                  recentOrders.map((order) => (
-                    <tr key={order.id} className="border-b border-border hover:bg-muted/50">
-                      <td className="py-3 px-4 font-mono text-xs">{order.order_number}</td>
-                      <td className="py-3 px-4">{order.customers?.name || 'N/A'}</td>
-                      <td className="py-3 px-4">Rp {(order.total_amount / 1000).toFixed(0)}K</td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                          order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          order.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                          order.status === 'ready' ? 'bg-purple-100 text-purple-800' :
-                          order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                          order.paid ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {order.paid ? 'Paid' : 'Unpaid'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
+      <DataTable
+        title="Recent Orders"
+        columns={orderColumns}
+        data={recentOrders}
+        emptyMessage="No orders yet. Create your first order to get started."
+      />
     </div>
   )
 }

@@ -2,10 +2,19 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { DataTable, type Column } from '@/components/data-table'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import { QRCodeSVG } from 'qrcode.react'
-import { MessageCircle, CheckCircle2, AlertCircle } from 'lucide-react'
+import {
+  MessageCircle, CheckCircle2, AlertCircle, DollarSign, CreditCard, TrendingUp, Clock,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Payment {
@@ -20,230 +29,205 @@ interface Payment {
   }
 }
 
+function StatsCard({ title, value, icon: Icon, bg, color, growth, growthColor }: {
+  title: string; value: string; icon: React.ElementType; bg: string; color: string
+  growth?: string; growthColor?: string
+}) {
+  return (
+    <div className="rounded-[24px] bg-muted/30 p-4 transition-all duration-300 hover:shadow-sm hover:-translate-y-0.5">
+      <div className="flex items-start justify-between rounded-xl bg-card p-5">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">{title}</p>
+          <p className="text-5xl font-bold tracking-tight text-foreground">{value}</p>
+          {growth && <p className={`text-sm ${growthColor}`}>{growth}</p>}
+        </div>
+        <div className={`flex size-[60px] shrink-0 items-center justify-center rounded-xl ${bg}`}>
+          <Icon className={`size-6 ${color}`} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function PaymentsPageFull() {
   const [payments, setPayments] = useState<Payment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
 
-  useEffect(() => {
-    loadPayments()
-  }, [])
+  useEffect(() => { loadPayments() }, [])
 
   const loadPayments = async () => {
     const supabase = createClient()
     const { data, error } = await supabase
       .from('payments')
-      .select(`
-        *,
-        orders (
-          order_number,
-          customers (name, phone)
-        )
-      `)
+      .select('*, orders(order_number, customers(name, phone))')
       .order('created_at', { ascending: false })
-
-    if (error) {
-      toast.error('Failed to load payments')
-      return
-    }
-
+    if (error) { toast.error('Gagal memuat pembayaran'); return }
     setPayments(data || [])
     setIsLoading(false)
   }
 
-  const handleSendViaWhatsApp = async (payment: Payment) => {
-    const message = `Pembayaran untuk order ${payment.orders?.order_number} sebesar Rp ${(payment.amount).toLocaleString('id-ID')} telah dikirim. Silakan lakukan pembayaran.`
-    const phone = payment.orders?.customers?.phone.replace(/^0/, '62')
-    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-    window.open(whatsappUrl, '_blank')
-    
-    toast.success('Membuka WhatsApp...')
-  }
-
   const handleMarkAsPaid = async (paymentId: string) => {
     const supabase = createClient()
-    const { error } = await supabase
-      .from('payments')
-      .update({ payment_status: 'completed' })
-      .eq('id', paymentId)
-
-    if (error) {
-      toast.error('Gagal mengupdate pembayaran')
-      return
-    }
-
-    toast.success('Pembayaran berhasil diperbarui')
+    const { error } = await supabase.from('payments').update({ payment_status: 'completed' }).eq('id', paymentId)
+    if (error) { toast.error('Gagal mengupdate'); return }
+    toast.success('Pembayaran diperbarui')
     loadPayments()
+    setDetailOpen(false)
     setSelectedPayment(null)
   }
 
+  const handleSendViaWhatsApp = (payment: Payment) => {
+    const msg = `Pembayaran untuk ${payment.orders?.order_number} sebesar Rp ${payment.amount.toLocaleString('id-ID')} telah dikirim. Silakan lakukan pembayaran.`
+    const phone = payment.orders?.customers?.phone.replace(/^0/, '62')
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
+    toast.success('Membuka WhatsApp...')
+  }
+
+  const paymentColumns: Column<Payment>[] = [
+    {
+      key: 'order',
+      label: 'Pesanan',
+      render: (p) => <span className="font-mono text-xs text-muted-foreground">{p.orders?.order_number}</span>,
+    },
+    {
+      key: 'customer',
+      label: 'Pelanggan',
+      render: (p) => <span>{p.orders?.customers?.name || 'N/A'}</span>,
+    },
+    {
+      key: 'amount',
+      label: 'Jumlah',
+      align: 'right',
+      render: (p) => <span className="font-medium">Rp {p.amount.toLocaleString('id-ID')}</span>,
+    },
+    {
+      key: 'method',
+      label: 'Metode',
+      render: (p) => <span className="capitalize text-xs text-muted-foreground">{p.payment_method}</span>,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (p) => (
+        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${
+          p.payment_status === 'completed' ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : 'bg-amber-50 text-amber-700 ring-amber-600/20'
+        }`}>
+          {p.payment_status === 'completed' ? <CheckCircle2 className="size-3" /> : <AlertCircle className="size-3" />}
+          {p.payment_status === 'completed' ? 'Lunas' : 'Menunggu'}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      label: 'Aksi',
+      align: 'right',
+      render: (p) => (
+        <Button size="sm" variant="outline" onClick={() => { setSelectedPayment(p); setDetailOpen(true) }}>
+          Detail
+        </Button>
+      ),
+    },
+  ]
+
+  const completed = payments.filter(p => p.payment_status === 'completed').length
+  const totalAmount = payments.reduce((s, p) => s + p.amount, 0)
+  const pendingAmount = payments.filter(p => p.payment_status !== 'completed').reduce((s, p) => s + p.amount, 0)
+
   if (isLoading) {
     return (
-      <div className="p-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-10 bg-muted rounded"></div>
-          <div className="h-64 bg-muted rounded"></div>
+      <div className="space-y-6 p-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1,2,3,4].map(i => (
+            <div key={i} className="animate-pulse rounded-[24px] bg-muted/30 p-4">
+              <div className="rounded-xl bg-card p-5 space-y-3">
+                <div className="h-4 w-24 bg-muted rounded" />
+                <div className="h-10 w-20 bg-muted rounded" />
+              </div>
+            </div>
+          ))}
         </div>
+        <div className="animate-pulse h-64 bg-muted rounded-xl" />
       </div>
     )
   }
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-8 p-6">
       <div>
-        <h1 className="text-4xl font-bold text-foreground">Manajemen Pembayaran</h1>
-        <p className="text-muted-foreground mt-2">Kelola pembayaran pesanan dan kirim notifikasi</p>
+        <h1 className="text-2xl font-bold tracking-tight">Pembayaran</h1>
+        <p className="text-sm text-muted-foreground mt-1">Kelola pembayaran dan kirim notifikasi</p>
       </div>
 
-      {selectedPayment ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Detail Pembayaran</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">No. Pesanan</p>
-                    <p className="text-lg font-semibold">{selectedPayment.orders?.order_number}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Pelanggan</p>
-                    <p className="text-lg font-semibold">{selectedPayment.orders?.customers?.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Jumlah</p>
-                    <p className="text-2xl font-bold text-primary">Rp {selectedPayment.amount.toLocaleString('id-ID')}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Metode Pembayaran</p>
-                    <p className="text-lg font-semibold capitalize">{selectedPayment.payment_method}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground">Status</p>
-                    <div className="mt-2 flex items-center gap-2">
-                      {selectedPayment.payment_status === 'completed' ? (
-                        <>
-                          <CheckCircle2 className="w-5 h-5 text-green-600" />
-                          <span className="text-lg font-semibold text-green-600">Sudah Dibayar</span>
-                        </>
-                      ) : (
-                        <>
-                          <AlertCircle className="w-5 h-5 text-yellow-600" />
-                          <span className="text-lg font-semibold text-yellow-600">Menunggu Pembayaran</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
+      {/* Stats */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatsCard title="Total Pembayaran" value={payments.length.toString()} icon={DollarSign} bg="bg-lime-50" color="text-lime-600" growth="All time" growthColor="text-muted-foreground" />
+        <StatsCard title="Lunas" value={completed.toString()} icon={CheckCircle2} bg="bg-emerald-50" color="text-emerald-600" growth={`${payments.length > 0 ? ((completed / payments.length) * 100).toFixed(0) : 0}% rate`} growthColor="text-green-600" />
+        <StatsCard title="Total Nominal" value={`Rp ${(totalAmount / 1000).toFixed(0)}K`} icon={CreditCard} bg="bg-cyan-50" color="text-cyan-600" />
+        <StatsCard title="Belum Dibayar" value={`Rp ${(pendingAmount / 1000).toFixed(0)}K`} icon={Clock} bg="bg-rose-50" color="text-rose-600" />
+      </div>
 
-                <div className="flex gap-4">
-                  {selectedPayment.payment_status !== 'completed' && (
-                    <>
-                      <Button onClick={() => handleSendViaWhatsApp(selectedPayment)} className="flex-1 gap-2">
-                        <MessageCircle className="w-4 h-4" />
-                        Kirim via WhatsApp
-                      </Button>
-                      <Button onClick={() => handleMarkAsPaid(selectedPayment.id)} variant="outline" className="flex-1">
-                        Tandai Sebagai Dibayar
-                      </Button>
-                    </>
-                  )}
-                  <Button onClick={() => setSelectedPayment(null)} variant="ghost" className="flex-1">
-                    Kembali
+      {/* Detail Dialog */}
+      <Dialog open={detailOpen} onOpenChange={(o) => { setDetailOpen(o); if (!o) setSelectedPayment(null) }}>
+        {selectedPayment && (
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Detail Pembayaran</DialogTitle>
+              <DialogDescription>{selectedPayment.orders?.order_number}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Pesanan</p>
+                  <p className="font-semibold">{selectedPayment.orders?.order_number}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Pelanggan</p>
+                  <p className="font-semibold">{selectedPayment.orders?.customers?.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Jumlah</p>
+                  <p className="text-xl font-bold">Rp {selectedPayment.amount.toLocaleString('id-ID')}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Metode</p>
+                  <p className="font-semibold capitalize">{selectedPayment.payment_method}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 rounded-lg bg-muted p-3">
+                {selectedPayment.payment_status === 'completed'
+                  ? <><CheckCircle2 className="size-5 text-green-600" /><span className="font-semibold text-green-600">Lunas</span></>
+                  : <><AlertCircle className="size-5 text-amber-600" /><span className="font-semibold text-amber-600">Menunggu</span></>
+                }
+              </div>
+
+              {selectedPayment.payment_status !== 'completed' && (
+                <div className="flex gap-3">
+                  <Button onClick={() => handleSendViaWhatsApp(selectedPayment)} variant="outline" className="flex-1 gap-2">
+                    <MessageCircle className="size-4" />
+                    WhatsApp
                   </Button>
+                  <Button onClick={() => handleMarkAsPaid(selectedPayment.id)} className="flex-1">Tandai Lunas</Button>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              )}
 
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle>Kode QR Pembayaran</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center py-8">
-                <QRCodeSVG
-                  value={`ORDER:${selectedPayment.orders?.order_number}|AMOUNT:${selectedPayment.amount}`}
-                  size={200}
-                  level="H"
-                  includeMargin={true}
-                />
-                <p className="text-xs text-muted-foreground mt-4 text-center">Bagikan kode QR ini kepada pelanggan</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Daftar Pembayaran</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 font-semibold">No. Pesanan</th>
-                    <th className="text-left py-3 px-4 font-semibold">Pelanggan</th>
-                    <th className="text-left py-3 px-4 font-semibold">Jumlah</th>
-                    <th className="text-left py-3 px-4 font-semibold">Metode</th>
-                    <th className="text-left py-3 px-4 font-semibold">Status</th>
-                    <th className="text-left py-3 px-4 font-semibold">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payments.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="text-center py-8 text-muted-foreground">
-                        Tidak ada pembayaran
-                      </td>
-                    </tr>
-                  ) : (
-                    payments.map((payment) => (
-                      <tr key={payment.id} className="border-b border-border hover:bg-muted/50">
-                        <td className="py-3 px-4 font-mono text-xs">{payment.orders?.order_number}</td>
-                        <td className="py-3 px-4">{payment.orders?.customers?.name}</td>
-                        <td className="py-3 px-4 font-semibold">Rp {payment.amount.toLocaleString('id-ID')}</td>
-                        <td className="py-3 px-4 capitalize text-xs">{payment.payment_method}</td>
-                        <td className="py-3 px-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 w-fit ${
-                            payment.payment_status === 'completed'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {payment.payment_status === 'completed' ? (
-                              <>
-                                <CheckCircle2 className="w-3 h-3" />
-                                Dibayar
-                              </>
-                            ) : (
-                              <>
-                                <AlertCircle className="w-3 h-3" />
-                                Menunggu
-                              </>
-                            )}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <Button
-                            onClick={() => setSelectedPayment(payment)}
-                            size="sm"
-                            variant="outline"
-                          >
-                            Lihat Detail
-                          </Button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+              <div className="flex justify-center">
+                <QRCodeSVG value={`ORDER:${selectedPayment.orders?.order_number}|AMOUNT:${selectedPayment.amount}`} size={160} level="H" includeMargin />
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </DialogContent>
+        )}
+      </Dialog>
+
+      {/* Table */}
+      <DataTable
+        title="Riwayat Pembayaran"
+        columns={paymentColumns}
+        data={payments}
+        emptyMessage="Belum ada pembayaran"
+      />
     </div>
   )
 }

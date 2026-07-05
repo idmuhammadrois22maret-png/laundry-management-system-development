@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react'
+import { Plus, Trash2, Save } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Customer {
@@ -146,178 +146,107 @@ export function OrderCreatePage({ onBack, onSuccess }: OrderCreatePageProps) {
   }
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center gap-4">
-        <Button
-          onClick={onBack}
-          variant="outline"
-          size="sm"
-          className="gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Kembali
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Buat Pesanan Baru</h1>
-          <p className="text-muted-foreground mt-1">Tambahkan pesanan untuk pelanggan</p>
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Customer & Info */}
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="customer">Pelanggan *</Label>
+          <select
+            id="customer"
+            value={selectedCustomer}
+            onChange={(e) => setSelectedCustomer(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm"
+          >
+            <option value="">Pilih Pelanggan</option>
+            {customers.map(customer => (
+              <option key={customer.id} value={customer.id}>
+                {customer.name} ({customer.phone})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="pickup">Tanggal Pengambilan</Label>
+            <Input id="pickup" type="date" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="notes">Catatan</Label>
+            <textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Catatan pesanan..."
+              className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm min-h-20 resize-none"
+            />
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Informasi Pesanan</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="customer">Pelanggan *</Label>
-                <select
-                  id="customer"
-                  value={selectedCustomer}
-                  onChange={(e) => setSelectedCustomer(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
-                >
-                  <option value="">Pilih Pelanggan</option>
-                  {customers.map(customer => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name} ({customer.phone})
-                    </option>
-                  ))}
-                </select>
-              </div>
+      {/* Services */}
+      <div className="space-y-3">
+        <div className="flex items-end gap-2">
+          <div className="flex-1 space-y-2">
+            <Label>Layanan</Label>
+            <select
+              onChange={(e) => {
+                if (e.target.value) handleAddService(e.target.value)
+                e.target.value = ''
+              }}
+              className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm"
+            >
+              <option value="">Pilih layanan...</option>
+              {services.map(service => (
+                <option key={service.id} value={service.id}>
+                  {service.name} - Rp {service.price.toLocaleString('id-ID')}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="pickup">Tanggal Pengambilan</Label>
+        {orderItems.length > 0 && (
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {orderItems.map(item => (
+              <div key={item.service_id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm">{item.serviceName}</p>
+                  <p className="text-xs text-muted-foreground">Rp {item.unit_price.toLocaleString('id-ID')}</p>
+                </div>
                 <Input
-                  id="pickup"
-                  type="date"
-                  value={pickupDate}
-                  onChange={(e) => setPickupDate(e.target.value)}
+                  type="number"
+                  min="1"
+                  value={item.quantity}
+                  onChange={(e) => handleQuantityChange(item.service_id, parseInt(e.target.value) || 1)}
+                  className="w-14 text-center text-sm"
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Catatan Pesanan</Label>
-                <textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Informasi khusus atau instruksi untuk pesanan ini..."
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground min-h-24 resize-none"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Tambahkan Layanan</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <Label htmlFor="services">Pilih Layanan</Label>
-                <div className="flex gap-2">
-                  <select
-                    id="services"
-                    onChange={(e) => {
-                      if (e.target.value) handleAddService(e.target.value)
-                      e.target.value = ''
-                    }}
-                    className="flex-1 px-3 py-2 border border-border rounded-md bg-background text-foreground"
-                  >
-                    <option value="">Pilih Layanan...</option>
-                    {services.map(service => (
-                      <option key={service.id} value={service.id}>
-                        {service.name} - Rp {service.price.toLocaleString('id-ID')}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {orderItems.length > 0 && (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {orderItems.map(item => (
-                    <div key={item.service_id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                      <div className="flex-1">
-                        <p className="font-semibold text-sm">{item.serviceName}</p>
-                        <p className="text-xs text-muted-foreground">Rp {item.unit_price.toLocaleString('id-ID')}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          min="1"
-                          value={item.quantity}
-                          onChange={(e) => handleQuantityChange(item.service_id, parseInt(e.target.value))}
-                          className="w-16 text-center"
-                        />
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-sm">
-                          Rp {(item.unit_price * item.quantity).toLocaleString('id-ID')}
-                        </p>
-                      </div>
-                      <Button
-                        onClick={() => handleRemoveService(item.service_id)}
-                        variant="ghost"
-                        size="sm"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-1">
-          <Card className="sticky top-8">
-            <CardHeader>
-              <CardTitle className="text-lg">Ringkasan Pesanan</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Jumlah Item</p>
-                <p className="text-2xl font-bold">{orderItems.length}</p>
-              </div>
-
-              <div className="border-t border-border pt-4">
-                <p className="text-sm text-muted-foreground mb-2">Total Layanan</p>
-                {orderItems.map(item => (
-                  <div key={item.service_id} className="flex justify-between text-sm mb-1">
-                    <span>{item.serviceName} x{item.quantity}</span>
-                    <span>Rp {(item.unit_price * item.quantity).toLocaleString('id-ID')}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="border-t border-border pt-4">
-                <p className="text-muted-foreground mb-2">Total</p>
-                <p className="text-3xl font-bold text-primary">
-                  Rp {totalAmount.toLocaleString('id-ID')}
+                <p className="text-sm font-medium w-20 text-right">
+                  Rp {(item.unit_price * item.quantity).toLocaleString('id-ID')}
                 </p>
+                <Button type="button" onClick={() => handleRemoveService(item.service_id)} variant="ghost" size="icon" className="size-8">
+                  <Trash2 className="size-3.5 text-red-600" />
+                </Button>
               </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-              <div className="flex gap-2 pt-4">
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isLoading || orderItems.length === 0 || !selectedCustomer}
-                  className="flex-1 gap-2"
-                >
-                  <Save className="w-4 h-4" />
-                  {isLoading ? 'Menyimpan...' : 'Buat Pesanan'}
-                </Button>
-                <Button onClick={onBack} variant="outline" className="flex-1">
-                  Batal
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Summary */}
+      <div className="border-t border-border pt-4 flex items-center justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground">Total</p>
+          <p className="text-2xl font-bold">Rp {totalAmount.toLocaleString('id-ID')}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button type="button" onClick={onBack} variant="outline">Batal</Button>
+          <Button type="submit" disabled={isLoading || orderItems.length === 0 || !selectedCustomer} className="gap-2">
+            <Save className="size-4" />
+            {isLoading ? 'Menyimpan...' : 'Buat Pesanan'}
+          </Button>
         </div>
       </div>
-    </div>
+    </form>
   )
 }

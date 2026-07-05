@@ -4,6 +4,13 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import { Plus, Edit2, Trash2, Calendar, User, DollarSign } from 'lucide-react'
 import { toast } from 'sonner'
 import { OrderCreatePage } from './order-create-page'
@@ -23,7 +30,8 @@ interface Order {
 export function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [currentView, setCurrentView] = useState<'list' | 'create' | 'edit'>('list')
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
 
   useEffect(() => {
@@ -69,45 +77,24 @@ export function OrdersPage() {
     loadOrders()
   }
 
-  if (currentView === 'create') {
-    return (
-      <OrderCreatePage
-        onBack={() => {
-          setCurrentView('list')
-          loadOrders()
-        }}
-        onSuccess={() => {
-          setCurrentView('list')
-          loadOrders()
-        }}
-      />
-    )
+  const handleCreateSuccess = () => {
+    setCreateOpen(false)
+    loadOrders()
   }
 
-  if (currentView === 'edit' && selectedOrder) {
-    return (
-      <OrderEditPage
-        order={selectedOrder}
-        onBack={() => {
-          setCurrentView('list')
-          setSelectedOrder(null)
-          loadOrders()
-        }}
-        onSuccess={() => {
-          setCurrentView('list')
-          setSelectedOrder(null)
-          loadOrders()
-        }}
-      />
-    )
+  const handleEditSuccess = () => {
+    setEditOpen(false)
+    setSelectedOrder(null)
+    loadOrders()
   }
 
   if (isLoading) {
     return (
-      <div className="p-8">
+      <div className="p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-10 bg-muted rounded"></div>
-          <div className="h-64 bg-muted rounded"></div>
+          <div className="h-10 bg-muted rounded w-48" />
+          <div className="h-8 bg-muted rounded w-64" />
+          <div className="h-64 bg-muted rounded" />
         </div>
       </div>
     )
@@ -115,41 +102,68 @@ export function OrdersPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'in_progress':
-        return 'bg-blue-100 text-blue-800'
-      case 'ready':
-        return 'bg-purple-100 text-purple-800'
-      case 'completed':
-        return 'bg-green-100 text-green-800'
-      case 'cancelled':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
+      case 'pending': return 'bg-yellow-100 text-yellow-800'
+      case 'in_progress': return 'bg-blue-100 text-blue-800'
+      case 'ready': return 'bg-purple-100 text-purple-800'
+      case 'completed': return 'bg-green-100 text-green-800'
+      case 'cancelled': return 'bg-red-100 text-red-800'
+      default: return 'bg-muted text-muted-foreground'
     }
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-foreground">Manajemen Pesanan</h1>
-          <p className="text-muted-foreground mt-2">Kelola pesanan pelanggan Anda</p>
+          <h1 className="text-2xl font-bold tracking-tight">Pesanan</h1>
+          <p className="text-sm text-muted-foreground mt-1">Kelola pesanan laundry pelanggan</p>
         </div>
-        <Button onClick={() => setCurrentView('create')} className="gap-2">
-          <Plus className="w-4 h-4" />
+        <Button onClick={() => setCreateOpen(true)} className="gap-2">
+          <Plus className="size-4" />
           Pesanan Baru
         </Button>
       </div>
 
+      {/* Create Dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Pesanan Baru</DialogTitle>
+            <DialogDescription>Buat pesanan laundry untuk pelanggan</DialogDescription>
+          </DialogHeader>
+          <OrderCreatePage
+            onBack={() => setCreateOpen(false)}
+            onSuccess={handleCreateSuccess}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editOpen} onOpenChange={(open) => { setEditOpen(open); if (!open) setSelectedOrder(null) }}>
+        {selectedOrder && (
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Pesanan</DialogTitle>
+              <DialogDescription>{selectedOrder.order_number}</DialogDescription>
+            </DialogHeader>
+            <OrderEditPage
+              order={selectedOrder}
+              onBack={() => { setEditOpen(false); setSelectedOrder(null) }}
+              onSuccess={handleEditSuccess}
+            />
+          </DialogContent>
+        )}
+      </Dialog>
+
+      {/* Orders list */}
       {orders.length === 0 ? (
         <Card>
           <CardContent className="py-12">
             <div className="text-center">
               <p className="text-muted-foreground mb-4">Belum ada pesanan</p>
-              <Button onClick={() => setCurrentView('create')} className="gap-2">
-                <Plus className="w-4 h-4" />
+              <Button onClick={() => setCreateOpen(true)} className="gap-2">
+                <Plus className="size-4" />
                 Buat Pesanan Pertama
               </Button>
             </div>
@@ -158,40 +172,35 @@ export function OrdersPage() {
       ) : (
         <div className="space-y-4">
           {orders.map((order) => (
-            <Card key={order.id} className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
+            <Card key={order.id} className="transition-shadow hover:shadow-md">
+              <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-3">
-                      <span className="font-mono text-lg font-bold">{order.order_number}</span>
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
+                      <span className="font-mono text-base font-bold">{order.order_number}</span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
                         {order.status.replace('_', ' ').toUpperCase()}
                       </span>
                       {order.paid && (
-                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
                           LUNAS
                         </span>
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm">{order.customers?.name || 'N/A'}</span>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="flex items-center gap-2 text-sm">
+                        <User className="size-3.5 text-muted-foreground shrink-0" />
+                        <span>{order.customers?.name || 'N/A'}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-semibold">Rp {order.total_amount.toLocaleString('id-ID')}</span>
+                      <div className="flex items-center gap-2 text-sm">
+                        <DollarSign className="size-3.5 text-muted-foreground shrink-0" />
+                        <span className="font-semibold">Rp {order.total_amount.toLocaleString('id-ID')}</span>
                       </div>
                       {order.pickup_date && (
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm">
-                            {new Date(order.pickup_date).toLocaleDateString('id-ID', {
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                          </span>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Calendar className="size-3.5 text-muted-foreground shrink-0" />
+                          <span>{new Date(order.pickup_date).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' })}</span>
                         </div>
                       )}
                       <div className="text-sm text-muted-foreground">
@@ -204,13 +213,13 @@ export function OrdersPage() {
                     <Button
                       onClick={() => {
                         setSelectedOrder(order)
-                        setCurrentView('edit')
+                        setEditOpen(true)
                       }}
                       size="sm"
                       variant="outline"
                       className="gap-1"
                     >
-                      <Edit2 className="w-4 h-4" />
+                      <Edit2 className="size-3.5" />
                       Edit
                     </Button>
                     <Button
@@ -219,7 +228,7 @@ export function OrdersPage() {
                       variant="destructive"
                       className="gap-1"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="size-3.5" />
                     </Button>
                   </div>
                 </div>

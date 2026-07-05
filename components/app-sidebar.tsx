@@ -1,52 +1,114 @@
-import { Button } from '@/components/ui/button'
-import { LayoutDashboard, Users, ShoppingCart, FileText, Bell, CreditCard } from 'lucide-react'
+'use client'
+
+import * as React from 'react'
+import {
+  LayoutDashboard, Users, ShoppingCart, CreditCard, Bell, FileText,
+  ChevronLeft, Sparkles, Moon, Sun,
+} from 'lucide-react'
+
+import {
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
+  SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+  SidebarProvider, SidebarTrigger,
+} from '@/components/ui/sidebar'
+import { useTheme } from '@/hooks/use-theme'
 
 interface AppSidebarProps {
   currentPage: string
   onPageChange: (page: string) => void
+  children: React.ReactNode
 }
 
-export function AppSidebar({ currentPage, onPageChange }: AppSidebarProps) {
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'customers', label: 'Customers', icon: Users },
-    { id: 'orders', label: 'Orders', icon: ShoppingCart },
-    { id: 'payments', label: 'Payments', icon: CreditCard },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'reports', label: 'Reports', icon: FileText },
-  ]
+const menuItems = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'customers', label: 'Customers', icon: Users },
+  { id: 'orders', label: 'Orders', icon: ShoppingCart },
+  { id: 'payments', label: 'Payments', icon: CreditCard },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'reports', label: 'Reports', icon: FileText },
+]
 
+export function AppSidebar({ currentPage, onPageChange, children }: AppSidebarProps) {
+  const { theme, toggle } = useTheme()
   return (
-    <aside className="w-64 border-r border-border bg-card">
-      <div className="p-6 border-b border-border">
-        <h1 className="text-xl font-bold text-foreground">LaundryPro</h1>
-        <p className="text-xs text-muted-foreground mt-1">Business Management</p>
-      </div>
+    <SidebarProvider>
+      <Sidebar collapsible="icon">
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                size="lg"
+                className="flex items-center gap-3 w-full group cursor-default"
+              >
+                <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 shadow-sm ring-1 ring-white/20">
+                  <Sparkles className="size-4 text-white" />
+                </div>
+                <span className="font-bold text-base tracking-tight">LaundryFlow</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
 
-      <nav className="p-4 space-y-2">
-        {menuItems.map((item) => {
-          const Icon = item.icon
-          const isActive = currentPage === item.id
-          return (
-            <Button
-              key={item.id}
-              onClick={() => onPageChange(item.id)}
-              variant={isActive ? 'default' : 'ghost'}
-              className="w-full justify-start gap-2"
-            >
-              <Icon className="w-4 h-4" />
-              {item.label}
-            </Button>
-          )
-        })}
-      </nav>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {menuItems.map((item) => {
+                  const Icon = item.icon
+                  const isActive = currentPage === item.id
+                  return (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        onClick={() => onPageChange(item.id)}
+                        tooltip={item.label}
+                      >
+                        <Icon className="size-4" />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
 
-      <div className="p-4 border-t border-border mt-auto">
-        <div className="bg-primary/10 rounded-lg p-3">
-          <p className="text-xs font-semibold text-foreground">Demo Mode</p>
-          <p className="text-xs text-muted-foreground mt-1">All features unlocked for testing</p>
+        <SidebarFooter>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <div className="px-3 py-2">
+                <div className="rounded-lg bg-sidebar-accent p-3">
+                  <p className="text-xs font-semibold">Demo Mode</p>
+                  <p className="text-[10px] text-sidebar-accent-foreground/60 mt-0.5">
+                    All features unlocked
+                  </p>
+                </div>
+              </div>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      </Sidebar>
+
+      {/* Main content */}
+      <main className="flex-1 overflow-auto">
+        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2 bg-background">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="-ml-1">
+              <ChevronLeft className="size-4" />
+            </SidebarTrigger>
+          </div>
+          <button
+            onClick={toggle}
+            className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted transition-colors"
+            title={theme === 'light' ? 'Dark mode' : 'Light mode'}
+          >
+            {theme === 'light' ? <Moon className="size-4" /> : <Sun className="size-4" />}
+            <span className="hidden sm:inline">{theme === 'light' ? 'Dark' : 'Light'}</span>
+          </button>
         </div>
-      </div>
-    </aside>
+        {children}
+      </main>
+    </SidebarProvider>
   )
 }

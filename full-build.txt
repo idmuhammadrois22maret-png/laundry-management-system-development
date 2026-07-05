@@ -1,0 +1,39 @@
+▲ Next.js 16.2.6 (Turbopack)
+- Environments: .env.local
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 1 errors:
+./hooks/use-theme.ts:31:28
+Expected '>', got 'ident'
+  [90m29 |[0m
+  [90m30 |[0m   [36mreturn[0m (
+[31m[1m>[0m [90m31 |[0m     <[33mThemeContext[0m.[33mProvider[0m value={{ theme, toggle }}>
+  [90m   |[0m                            [31m[1m^^^^^[0m
+  [90m32 |[0m       {children}
+  [90m33 |[0m     </[33mThemeContext[0m.[33mProvider[0m>
+  [90m34 |[0m   )
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Server Component:
+    ./hooks/use-theme.ts
+    ./app/layout.tsx
+
+  Client Component Browser:
+    ./hooks/use-theme.ts [Client Component Browser]
+    ./components/app-sidebar.tsx [Client Component Browser]
+    ./app/app/page.tsx [Client Component Browser]
+    ./app/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./hooks/use-theme.ts [Client Component SSR]
+    ./components/app-sidebar.tsx [Client Component SSR]
+    ./app/app/page.tsx [Client Component SSR]
+    ./app/app/page.tsx [Server Component]
+
+
+    at <unknown> (./hooks/use-theme.ts:31:28)

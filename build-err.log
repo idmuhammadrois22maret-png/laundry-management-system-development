@@ -1,0 +1,10 @@
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+Error occurred prerendering page "/landing". Read more: https://nextjs.org/docs/messages/prerender-error
+ReferenceError: height is not defined
+    at <unknown> (D:\nextjs project\laundry-management-system-development\.next\server\chunks\ssr\app_landing_page_tsx_0ann4bo._.js:9:18781)
+    at Array.map (<anonymous>)
+    at f5 (D:\nextjs project\laundry-management-system-development\.next\server\chunks\ssr\app_landing_page_tsx_0ann4bo._.js:9:18720) {
+  digest: '1473519223'
+}
+Export encountered an error on /landing/page: /landing, exiting the build.
+⨯ Next.js build worker exited with code: 1 and signal: null

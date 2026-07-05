@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Save, Trash2, CheckCircle2 } from 'lucide-react'
+import { Save, Trash2, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Order {
@@ -51,7 +50,6 @@ export function OrderEditPage({ order, onBack, onSuccess }: OrderEditPageProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
     setIsLoading(true)
     const supabase = createClient()
 
@@ -88,20 +86,16 @@ export function OrderEditPage({ order, onBack, onSuccess }: OrderEditPageProps) 
   }
 
   const handleConfirmComplete = async () => {
-    if (!confirm('Konfirmasi pesanan sudah selesai? Kami akan mengirim notifikasi WhatsApp ke pelanggan.')) {
+    if (!confirm('Konfirmasi pesanan sudah selesai? Kami akan menyiapkan notifikasi WhatsApp.')) {
       return
     }
 
     setIsConfirmingComplete(true)
     const supabase = createClient()
 
-    // Update order status to completed
     const { error: updateError } = await supabase
       .from('orders')
-      .update({
-        status: 'completed',
-        updated_at: new Date().toISOString(),
-      })
+      .update({ status: 'completed', updated_at: new Date().toISOString() })
       .eq('id', order.id)
 
     if (updateError) {
@@ -110,38 +104,27 @@ export function OrderEditPage({ order, onBack, onSuccess }: OrderEditPageProps) 
       return
     }
 
-    // Create notification for WhatsApp
-    const { error: notifError } = await supabase
+    await supabase
       .from('notifications')
       .insert({
         order_id: order.id,
         customer_id: order.customer_id,
-        message: `Pesanan Anda ${order.order_number} telah selesai! Silakan ambil pakaian Anda di toko kami. Terima kasih telah menggunakan layanan kami.`,
+        message: `Pesanan Anda ${order.order_number} telah selesai! Silakan ambil pakaian Anda di toko kami. Terima kasih!`,
         notification_type: 'order_completed',
         sent: false,
       })
 
-    if (notifError) {
-      console.log('[v0] Notification creation error:', notifError)
-    }
-
-    toast.success('Pesanan dikonfirmasi selesai! Notifikasi WhatsApp telah disiapkan untuk dikirim.')
+    toast.success('Pesanan dikonfirmasi selesai!')
     setIsConfirmingComplete(false)
     onSuccess()
   }
 
   const handleDelete = async () => {
-    if (!confirm('Apakah Anda yakin ingin menghapus pesanan ini?')) {
-      return
-    }
+    if (!confirm('Apakah Anda yakin ingin menghapus pesanan ini?')) return
 
     setIsDeleting(true)
     const supabase = createClient()
-
-    const { error } = await supabase
-      .from('orders')
-      .delete()
-      .eq('id', order.id)
+    const { error } = await supabase.from('orders').delete().eq('id', order.id)
 
     if (error) {
       toast.error('Gagal menghapus pesanan')
@@ -153,200 +136,105 @@ export function OrderEditPage({ order, onBack, onSuccess }: OrderEditPageProps) 
     onSuccess()
   }
 
-  const statusColors: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    in_progress: 'bg-blue-100 text-blue-800',
-    ready: 'bg-purple-100 text-purple-800',
-    completed: 'bg-green-100 text-green-800',
-    cancelled: 'bg-red-100 text-red-800',
-  }
-
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Button
-            onClick={onBack}
-            variant="outline"
-            size="sm"
-            className="gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Kembali
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Edit Pesanan</h1>
-            <p className="text-muted-foreground mt-1">{order.order_number}</p>
-          </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Order info overview */}
+      <div className="grid grid-cols-2 gap-3 rounded-lg bg-muted p-4">
+        <div>
+          <p className="text-xs text-muted-foreground">Pelanggan</p>
+          <p className="font-semibold">{order.customers?.name}</p>
         </div>
-        {formData.status !== 'completed' && formData.status !== 'cancelled' && (
-          <Button
-            onClick={handleConfirmComplete}
-            disabled={isConfirmingComplete}
-            className="gap-2 bg-green-600 hover:bg-green-700"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            {isConfirmingComplete ? 'Memproses...' : 'Konfirmasi Selesai'}
-          </Button>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Informasi Pesanan</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Pelanggan</p>
-                    <p className="text-lg font-semibold">{order.customers?.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total</p>
-                    <p className="text-lg font-bold text-primary">Rp {order.total_amount.toLocaleString('id-ID')}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="status">Status Pesanan</Label>
-                    <select
-                      id="status"
-                      name="status"
-                      value={formData.status}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
-                    >
-                      <option value="pending">Menunggu</option>
-                      <option value="in_progress">Sedang Dikerjakan</option>
-                      <option value="ready">Siap Diambil</option>
-                      <option value="completed">Selesai</option>
-                      <option value="cancelled">Dibatalkan</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="payment_method">Metode Pembayaran</Label>
-                    <select
-                      id="payment_method"
-                      name="payment_method"
-                      value={formData.payment_method}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
-                    >
-                      <option value="cash">Tunai</option>
-                      <option value="bank_transfer">Transfer Bank</option>
-                      <option value="card">Kartu Kredit</option>
-                      <option value="e_wallet">E-Wallet</option>
-                      <option value="qris">QRIS</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="pickup_date">Tanggal Pengambilan</Label>
-                    <Input
-                      id="pickup_date"
-                      name="pickup_date"
-                      type="date"
-                      value={formData.pickup_date}
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  <div className="space-y-2 flex items-end">
-                    <label className="flex items-center gap-3 cursor-pointer w-full p-3 border border-border rounded-md hover:bg-muted">
-                      <input
-                        type="checkbox"
-                        checked={formData.paid}
-                        onChange={handleChange}
-                        name="paid"
-                        className="w-4 h-4"
-                      />
-                      <span className="text-sm font-medium">Sudah Dibayar</span>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Catatan</Label>
-                  <textarea
-                    id="notes"
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleChange}
-                    placeholder="Informasi tambahan tentang pesanan..."
-                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground min-h-24 resize-none"
-                  />
-                </div>
-
-                <div className="flex gap-4 pt-6 border-t border-border">
-                  <Button type="submit" disabled={isLoading} className="gap-2 flex-1">
-                    <Save className="w-4 h-4" />
-                    {isLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
-                  </Button>
-                  <Button type="button" onClick={onBack} variant="outline" className="flex-1">
-                    Batal
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-1 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className={`px-4 py-2 rounded-full font-semibold text-center ${statusColors[formData.status] || statusColors.pending}`}>
-                {formData.status.replace('_', ' ').toUpperCase()}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Detail Pembayaran</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Metode</p>
-                <p className="font-semibold capitalize">{formData.payment_method.replace('_', ' ')}</p>
-              </div>
-              <div className="p-3 bg-muted rounded-lg flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Status Pembayaran</p>
-                  <p className="font-semibold">
-                    {formData.paid ? 'Sudah Dibayar' : 'Belum Dibayar'}
-                  </p>
-                </div>
-                {formData.paid && <CheckCircle2 className="w-5 h-5 text-green-600" />}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-red-200 bg-red-50">
-            <CardHeader>
-              <CardTitle className="text-lg text-red-900">Zona Bahaya</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                variant="destructive"
-                className="w-full gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                {isDeleting ? 'Menghapus...' : 'Hapus Pesanan'}
-              </Button>
-            </CardContent>
-          </Card>
+        <div>
+          <p className="text-xs text-muted-foreground">Total</p>
+          <p className="font-bold text-primary">Rp {order.total_amount.toLocaleString('id-ID')}</p>
         </div>
       </div>
-    </div>
+
+      {/* Confirm complete button */}
+      {formData.status !== 'completed' && formData.status !== 'cancelled' && (
+        <Button
+          type="button"
+          onClick={handleConfirmComplete}
+          disabled={isConfirmingComplete}
+          className="w-full gap-2 bg-green-600 hover:bg-green-700"
+        >
+          <CheckCircle2 className="size-4" />
+          {isConfirmingComplete ? 'Memproses...' : 'Konfirmasi Selesai'}
+        </Button>
+      )}
+
+      {/* Fields */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="status">Status</Label>
+          <select
+            id="status"
+            name="status"
+            value={formData.status}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm"
+          >
+            <option value="pending">Menunggu</option>
+            <option value="in_progress">Sedang Dikerjakan</option>
+            <option value="ready">Siap Diambil</option>
+            <option value="completed">Selesai</option>
+            <option value="cancelled">Dibatalkan</option>
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="payment_method">Pembayaran</Label>
+          <select
+            id="payment_method"
+            name="payment_method"
+            value={formData.payment_method}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm"
+          >
+            <option value="cash">Tunai</option>
+            <option value="bank_transfer">Transfer Bank</option>
+            <option value="card">Kartu Kredit</option>
+            <option value="e_wallet">E-Wallet</option>
+            <option value="qris">QRIS</option>
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="pickup_date">Tanggal Pengambilan</Label>
+          <Input id="pickup_date" name="pickup_date" type="date" value={formData.pickup_date} onChange={handleChange} />
+        </div>
+
+        <div className="space-y-2 flex items-end">
+          <label className="flex items-center gap-3 cursor-pointer w-full p-3 border border-border rounded-md hover:bg-muted">
+            <input type="checkbox" checked={formData.paid} onChange={handleChange} name="paid" className="size-4" />
+            <span className="text-sm font-medium">Sudah Dibayar</span>
+          </label>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="notes">Catatan</Label>
+        <textarea
+          id="notes"
+          name="notes"
+          value={formData.notes}
+          onChange={handleChange}
+          placeholder="Informasi tambahan..."
+          className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm min-h-20 resize-none"
+        />
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3 pt-4 border-t border-border">
+        <Button type="submit" disabled={isLoading} className="flex-1 gap-2">
+          <Save className="size-4" />
+          {isLoading ? 'Menyimpan...' : 'Simpan'}
+        </Button>
+        <Button type="button" onClick={onBack} variant="outline" className="flex-1">Batal</Button>
+        <Button type="button" onClick={handleDelete} disabled={isDeleting} variant="destructive" className="gap-2">
+          <Trash2 className="size-4" />
+        </Button>
+      </div>
+    </form>
   )
 }
