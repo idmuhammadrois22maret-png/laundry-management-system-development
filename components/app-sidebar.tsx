@@ -19,12 +19,12 @@ interface AppSidebarProps {
 }
 
 const menuItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/app/dashboard' },
-  { id: 'customers', label: 'Customers', icon: Users, href: '/app/customers' },
-  { id: 'orders', label: 'Orders', icon: ShoppingCart, href: '/app/orders' },
-  { id: 'payments', label: 'Payments', icon: CreditCard, href: '/app/payments' },
-  { id: 'notifications', label: 'Notifications', icon: Bell, href: '/app/notifications' },
-  { id: 'reports', label: 'Reports', icon: FileText, href: '/app/reports' },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
+  { id: 'customers', label: 'Customers', icon: Users, href: '/customers' },
+  { id: 'orders', label: 'Orders', icon: ShoppingCart, href: '/orders' },
+  { id: 'payments', label: 'Payments', icon: CreditCard, href: '/payments' },
+  { id: 'notifications', label: 'Notifications', icon: Bell, href: '/notifications' },
+  { id: 'reports', label: 'Reports', icon: FileText, href: '/reports' },
 ]
 
 export function AppSidebar({ children }: AppSidebarProps) {

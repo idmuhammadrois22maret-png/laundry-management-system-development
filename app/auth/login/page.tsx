@@ -36,7 +36,7 @@ export default function LoginPage() {
         }
         throw error
       }
-      if (data?.user) router.push('/app')
+      if (data?.user) router.push('/dashboard')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Terjadi kesalahan')
     } finally {

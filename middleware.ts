@@ -23,17 +23,20 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Protect /app routes — redirect to login if no session
-  if (request.nextUrl.pathname.startsWith('/app') && !user) {
+  // Protect app routes — redirect to login if no session
+  const appPaths = ['/dashboard', '/customers', '/orders', '/payments', '/notifications', '/reports']
+  const isAppPath = appPaths.some(p => request.nextUrl.pathname.startsWith(p))
+
+  if (isAppPath && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)
   }
 
-  // Already logged in and trying to access login page? redirect to /app
+  // Already logged in and trying to access login page? redirect to dashboard
   if (request.nextUrl.pathname.startsWith('/auth/login') && user) {
     const url = request.nextUrl.clone()
-    url.pathname = '/app'
+    url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
 
