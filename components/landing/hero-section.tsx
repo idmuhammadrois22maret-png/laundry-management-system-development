@@ -78,15 +78,6 @@ export function HeroSection() {
                 Coba Gratis
                 <ArrowRight className="h-4 w-4" />
               </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                className="h-11 gap-2 border-border px-6 text-[#111827]"
-                onClick={() => router.push('/auth/login')}
-              >
-                <Play className="h-4 w-4" />
-                Demo Langsung
-              </Button>
             </motion.div>
 
             {/* Trusted by strip */}
