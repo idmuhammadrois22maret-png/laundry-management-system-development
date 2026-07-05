@@ -7,6 +7,9 @@ import {
   DollarSign, Eye,
 } from 'lucide-react'
 import { DataTable, type Column } from '@/components/data-table'
+import {
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
+} from 'recharts'
 
 interface DashboardStats {
   totalCustomers: number
@@ -24,57 +27,6 @@ interface Order {
   created_at: string
   customers: { name: string; phone: string } | null
 }
-
-const statsCardConfig = [
-  {
-    key: 'revenue',
-    title: 'Total Revenue',
-    icon: DollarSign,
-    bg: 'bg-lime-50',
-    iconColor: 'text-lime-600',
-    format: (v: number) => {
-      if (v >= 1_000_000) return `Rp ${(v / 1_000_000).toFixed(1)}M`
-      if (v >= 1_000) return `Rp ${(v / 1_000).toFixed(1)}K`
-      return `Rp ${v}`
-    },
-    growth: '+23% vs last month',
-    growthColor: 'text-green-600',
-  },
-  {
-    key: 'customers',
-    title: 'Active Customers',
-    icon: Users,
-    bg: 'bg-cyan-50',
-    iconColor: 'text-cyan-600',
-    format: (v: number) => v.toLocaleString('id-ID'),
-    growth: '+12% this week',
-    growthColor: 'text-green-600',
-  },
-  {
-    key: 'orders',
-    title: 'Total Orders',
-    icon: Eye,
-    bg: 'bg-orange-50',
-    iconColor: 'text-orange-600',
-    format: (v: number) => v.toLocaleString('id-ID'),
-    growth: '+5% today',
-    growthColor: 'text-green-600',
-  },
-  {
-    key: 'pending',
-    title: 'Pending Orders',
-    icon: TrendingUp,
-    bg: 'bg-rose-50',
-    iconColor: 'text-rose-600',
-    format: (v: number, total: number) =>
-      total > 0 ? `${((v / total) * 100).toFixed(1)}%` : '0%',
-    growth: total => {
-      const pct = total > 0 ? (stats.pendingOrders / total) * 100 : 0
-      return `${pct.toFixed(1)}% of total`
-    },
-    growthColor: 'text-amber-600',
-  },
-]
 
 function StatsCard({
   title,
@@ -109,6 +61,8 @@ function StatsCard({
   )
 }
 
+const PIE_COLORS = ['#f59e0b', '#3b82f6', '#8b5cf6', '#22c55e', '#ef4444']
+
 export function Dashboard() {
   const [stats, setStats] = useState<DashboardStats>({
     totalCustomers: 0,
@@ -119,6 +73,9 @@ export function Dashboard() {
   const [recentOrders, setRecentOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [revenueByDay, setRevenueByDay] = useState<{ day: string; revenue: number }[]>([])
+  const [ordersByDay, setOrdersByDay] = useState<{ day: string; orders: number }[]>([])
+  const [ordersByStatus, setOrdersByStatus] = useState<{ name: string; value: number }[]>([])
 
   useEffect(() => {
     loadDashboardData()
@@ -143,7 +100,7 @@ export function Dashboard() {
       if (err3) throw err3
 
       const { data: ordersData, error: err4 } = await supabase
-        .from('orders').select('total_amount').eq('paid', true)
+        .from('orders').select('total_amount, created_at, status, paid')
       if (err4) throw err4
 
       const totalRevenue = ordersData?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0
@@ -159,6 +116,57 @@ export function Dashboard() {
         totalRevenue,
       })
       setRecentOrders(recent ?? [])
+
+      // ——— Chart data ———
+
+      // Revenue by day (last 7 days)
+      const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', "Jum'at", 'Sabtu']
+      const dayMap: Record<string, number> = {}
+      const orderDayMap: Record<string, number> = {}
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date()
+        d.setDate(d.getDate() - i)
+        const key = d.toISOString().split('T')[0]
+        dayMap[key] = 0
+        orderDayMap[key] = 0
+      }
+      ;(ordersData || []).forEach(o => {
+        const key = o.created_at?.split('T')[0]
+        if (key && key in dayMap) {
+          dayMap[key] += o.total_amount || 0
+          orderDayMap[key] += 1
+        }
+      })
+      setRevenueByDay(
+        Object.entries(dayMap).map(([date, revenue]) => ({
+          day: dayNames[new Date(date).getDay()],
+          revenue,
+        }))
+      )
+      setOrdersByDay(
+        Object.entries(orderDayMap).map(([date, orders]) => ({
+          day: dayNames[new Date(date).getDay()],
+          orders,
+        }))
+      )
+
+      // Orders by status (pie)
+      const statusCount: Record<string, number> = { pending: 0, in_progress: 0, ready: 0, completed: 0, cancelled: 0 }
+      ;(ordersData || []).forEach(o => {
+        if (statusCount.hasOwnProperty(o.status)) statusCount[o.status]++
+      })
+      const statusLabels: Record<string, string> = {
+        pending: 'Pending',
+        in_progress: 'Diproses',
+        ready: 'Siap',
+        completed: 'Selesai',
+        cancelled: 'Batal',
+      }
+      setOrdersByStatus(
+        Object.entries(statusCount)
+          .filter(([, v]) => v > 0)
+          .map(([k, v]) => ({ name: statusLabels[k] || k, value: v }))
+      )
     } catch (err: any) {
       console.error('Dashboard error:', err)
       setError(err?.message || err?.name || JSON.stringify(err) || 'Failed to load data')
@@ -215,6 +223,9 @@ export function Dashboard() {
     },
   ]
 
+  const formatToIDR = (v: number) => `Rp ${(v / 1000).toFixed(0)}K`
+  const formatTooltip = (v: number) => `Rp ${v.toLocaleString('id-ID')}`
+
   if (isLoading) {
     return (
       <div className="space-y-6 p-6">
@@ -228,6 +239,9 @@ export function Dashboard() {
               </div>
             </div>
           ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[1,2].map(i => <div key={i} className="animate-pulse h-72 bg-muted rounded-[24px]" />)}
         </div>
         <div className="animate-pulse h-64 bg-muted rounded-xl" />
       </div>
@@ -253,6 +267,30 @@ export function Dashboard() {
 
   const totalRevenue = stats.totalRevenue
   const totalOrders = stats.totalOrders
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="rounded-lg border border-border bg-card px-3 py-2 text-sm shadow-md">
+          <p className="font-medium">{label}</p>
+          <p className="text-muted-foreground">{formatTooltip(payload[0].value)}</p>
+        </div>
+      )
+    }
+    return null
+  }
+
+  const PieTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="rounded-lg border border-border bg-card px-3 py-2 text-sm shadow-md">
+          <p className="font-medium">{payload[0].name}</p>
+          <p className="text-muted-foreground">{payload[0].value} pesanan</p>
+        </div>
+      )
+    }
+    return null
+  }
 
   return (
     <div className="space-y-8 p-6">
@@ -310,6 +348,89 @@ export function Dashboard() {
           bg="bg-rose-50"
           iconColor="text-rose-600"
         />
+      </div>
+
+      {/* Charts row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Revenue chart */}
+        <div className="rounded-[24px] bg-muted/30 p-3">
+          <h3 className="text-sm font-medium text-foreground px-2 py-2">Pendapatan 7 Hari</h3>
+          <div className="rounded-xl bg-card p-5">
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={revenueByDay}>
+                <defs>
+                  <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="day" tick={{ fontSize: 12 }} stroke="#9ca3af" />
+                <YAxis tickFormatter={formatToIDR} tick={{ fontSize: 12 }} stroke="#9ca3af" />
+                <Tooltip content={<CustomTooltip />} />
+                <Area type="monotone" dataKey="revenue" stroke="#22c55e" fill="url(#revenueGrad)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Orders by status (Pie) */}
+        <div className="rounded-[24px] bg-muted/30 p-3">
+          <h3 className="text-sm font-medium text-foreground px-2 py-2">Pesanan per Status</h3>
+          <div className="rounded-xl bg-card p-5 flex items-center justify-center">
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart>
+                <Pie
+                  data={ordersByStatus}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={3}
+                  dataKey="value"
+                >
+                  {ordersByStatus.map((_, i) => (
+                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip content={<PieTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+            {/* Legend */}
+            <div className="hidden md:block space-y-2 ml-2">
+              {ordersByStatus.map((item, i) => (
+                <div key={item.name} className="flex items-center gap-2 text-sm">
+                  <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                  <span className="text-muted-foreground">{item.name}</span>
+                  <span className="font-medium">{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bar chart — orders per day */}
+      <div className="rounded-[24px] bg-muted/30 p-3">
+        <h3 className="text-sm font-medium text-foreground px-2 py-2">Pesanan 7 Hari</h3>
+        <div className="rounded-xl bg-card p-5">
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={ordersByDay}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="day" tick={{ fontSize: 12 }} stroke="#9ca3af" />
+              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} stroke="#9ca3af" />
+              <Tooltip content={({ active, payload, label }: any) =>
+                active && payload?.length ? (
+                  <div className="rounded-lg border border-border bg-card px-3 py-2 text-sm shadow-md">
+                    <p className="font-medium">{label}</p>
+                    <p className="text-muted-foreground">{payload[0].value} pesanan</p>
+                  </div>
+                ) : null
+              } />
+              <Bar dataKey="orders" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Recent Orders */}
