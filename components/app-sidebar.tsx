@@ -5,6 +5,7 @@ import {
   LayoutDashboard, Users, ShoppingCart, CreditCard, Bell, FileText,
   ChevronLeft, Sparkles, Moon, Sun,
 } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
 
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -14,22 +15,23 @@ import {
 import { useTheme } from '@/hooks/use-theme'
 
 interface AppSidebarProps {
-  currentPage: string
-  onPageChange: (page: string) => void
   children: React.ReactNode
 }
 
 const menuItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'customers', label: 'Customers', icon: Users },
-  { id: 'orders', label: 'Orders', icon: ShoppingCart },
-  { id: 'payments', label: 'Payments', icon: CreditCard },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'reports', label: 'Reports', icon: FileText },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/app/dashboard' },
+  { id: 'customers', label: 'Customers', icon: Users, href: '/app/customers' },
+  { id: 'orders', label: 'Orders', icon: ShoppingCart, href: '/app/orders' },
+  { id: 'payments', label: 'Payments', icon: CreditCard, href: '/app/payments' },
+  { id: 'notifications', label: 'Notifications', icon: Bell, href: '/app/notifications' },
+  { id: 'reports', label: 'Reports', icon: FileText, href: '/app/reports' },
 ]
 
-export function AppSidebar({ currentPage, onPageChange, children }: AppSidebarProps) {
+export function AppSidebar({ children }: AppSidebarProps) {
+  const pathname = usePathname()
+  const router = useRouter()
   const { theme, toggle } = useTheme()
+  const currentPage = pathname.split('/').pop() || 'dashboard'
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon">
@@ -60,7 +62,7 @@ export function AppSidebar({ currentPage, onPageChange, children }: AppSidebarPr
                     <SidebarMenuItem key={item.id}>
                       <SidebarMenuButton
                         isActive={isActive}
-                        onClick={() => onPageChange(item.id)}
+                        onClick={() => router.push(item.href)}
                         tooltip={item.label}
                       >
                         <Icon className="size-4" />
