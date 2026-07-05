@@ -29,9 +29,14 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) throw error
-      router.push('/app')
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        if (error.message.includes('Email not confirmed')) {
+          throw new Error('Email belum dikonfirmasi. Cek email Anda atau login dengan Google.')
+        }
+        throw error
+      }
+      if (data?.user) router.push('/app')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Terjadi kesalahan')
     } finally {

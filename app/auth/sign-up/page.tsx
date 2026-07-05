@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Mail, Lock, Eye, EyeOff, User, Globe } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function SignUpPage() {
   const [name, setName] = useState('')
@@ -43,9 +44,17 @@ export default function SignUpPage() {
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: { email_confirmed: true },
         },
       })
-      if (error) throw error
+      if (error) {
+        if (error.message.includes('User already registered')) {
+          setError('Email sudah terdaftar. Silakan login.')
+          return
+        }
+        throw error
+      }
+      toast.success('Akun berhasil dibuat! Silakan login.')
       router.push('/auth/login')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An error occurred')
