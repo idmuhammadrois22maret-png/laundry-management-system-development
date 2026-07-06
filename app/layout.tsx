@@ -12,8 +12,19 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Laundry Business Management System',
+  title: 'Laundrio - Laundry Management System',
   description: 'Complete laundry business management with customer orders, payments, and notifications',
+  icons: {
+    icon: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
+  openGraph: {
+    title: 'Laundrio - Laundry Management System',
+    description: 'Complete laundry business management with customer orders, payments, and notifications',
+    siteName: 'Laundrio',
+    images: [{ url: '/og-image.svg', width: 1200, height: 630 }],
+    type: 'website',
+  },
 }
 
 export const viewport: Viewport = {

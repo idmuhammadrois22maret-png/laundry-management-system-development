@@ -3,16 +3,17 @@
 import * as React from 'react'
 import {
   LayoutDashboard, Users, ShoppingCart, CreditCard, Bell, FileText,
-  ChevronLeft, Sparkles, Moon, Sun, ChevronRight, Home,
+  ChevronLeft, Sparkles, Moon, Sun, LogOut,
 } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
-
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
   SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
   SidebarProvider, SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { useTheme } from '@/hooks/use-theme'
+import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 
 interface AppSidebarProps {
   children: React.ReactNode
@@ -43,6 +44,12 @@ export function AppSidebar({ children }: AppSidebarProps) {
   }
   const breadcrumb = breadcrumbLabels[currentPage] || 'Dashboard'
 
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
+
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon">
@@ -53,10 +60,10 @@ export function AppSidebar({ children }: AppSidebarProps) {
                 size="lg"
                 className="flex items-center gap-3 w-full group cursor-default"
               >
-                <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 shadow-sm ring-1 ring-white/20">
-                  <Sparkles className="size-5 text-white" />
+                <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 shadow-sm ring-1 ring-white/20">
+                  <Sparkles className="size-4 text-white" />
                 </div>
-                <span className="font-bold text-lg tracking-tight">Laundrio</span>
+                <span className="font-bold text-base tracking-tight">Laundrio</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -76,7 +83,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
                         onClick={() => router.push(item.href)}
                         tooltip={item.label}
                       >
-                        <Icon className="size-5" />
+                        <Icon className="size-4" />
                         <span>{item.label}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -90,14 +97,14 @@ export function AppSidebar({ children }: AppSidebarProps) {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <div className="px-3 py-2">
-                <div className="rounded-lg bg-sidebar-accent p-3">
-                  <p className="text-xs font-semibold">Demo Mode</p>
-                  <p className="text-[10px] text-sidebar-accent-foreground/60 mt-0.5">
-                    All features unlocked
-                  </p>
-                </div>
-              </div>
+              <SidebarMenuButton
+                onClick={handleLogout}
+                tooltip="Logout"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 data-active:bg-red-50"
+              >
+                <LogOut className="size-4" />
+                <span>Logout</span>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
@@ -105,17 +112,12 @@ export function AppSidebar({ children }: AppSidebarProps) {
 
       {/* Main content */}
       <main className="flex-1 overflow-auto">
-        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3 bg-background">
+        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2 bg-background">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="-ml-1">
               <ChevronLeft className="size-4" />
             </SidebarTrigger>
-            {/* Breadcrumb */}
-            <nav className="flex items-center gap-1.5 text-sm ml-2">
-              <Home className="size-4 text-muted-foreground" />
-              <ChevronRight className="size-3.5 text-muted-foreground/50" />
-              <span className="font-medium text-foreground">{breadcrumb}</span>
-            </nav>
+            <span className="text-sm font-medium text-foreground ml-1">/ {breadcrumb}</span>
           </div>
           <button
             onClick={toggle}

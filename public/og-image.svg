@@ -1,0 +1,8 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#111827"/>
+  <rect x="540" y="195" width="120" height="120" rx="24" fill="white"/>
+  <path d="M570 315V255L600 235L630 255V315L600 335L570 315Z" fill="#111827"/>
+  <path d="M582 285L588 291L600 279" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+  <text x="600" y="400" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-size="48" font-weight="bold" letter-spacing="4">Laundrio</text>
+  <text x="600" y="445" text-anchor="middle" fill="#9CA3AF" font-family="Arial,sans-serif" font-size="22">Laundry Management System</text>
+</svg>
