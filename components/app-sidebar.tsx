@@ -13,7 +13,12 @@ import {
 } from '@/components/ui/sidebar'
 import { useTheme } from '@/hooks/use-theme'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from 'sonner'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 interface AppSidebarProps {
   children: React.ReactNode
@@ -97,14 +102,24 @@ export function AppSidebar({ children }: AppSidebarProps) {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={handleLogout}
-                tooltip="Logout"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50 data-active:bg-red-50"
-              >
-                <LogOut className="size-4" />
-                <span>Logout</span>
-              </SidebarMenuButton>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-sidebar-accent data-[open]:bg-sidebar-accent">
+                  <div className="flex size-7 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-blue-700 text-[10px] font-bold text-white">
+                    A
+                  </div>
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="truncate text-sm font-medium">Akun</p>
+                    <p className="truncate text-xs text-muted-foreground">Kelola akun</p>
+                  </div>
+                  <LogOut className="size-3.5 shrink-0 text-muted-foreground/60" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" side="top" className="w-56">
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 gap-3">
+                    <LogOut className="size-4" />
+                    <span>Logout</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>

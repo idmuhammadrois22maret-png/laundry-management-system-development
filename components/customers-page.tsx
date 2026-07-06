@@ -140,7 +140,7 @@ export function CustomersPage() {
         </div>
         <Button onClick={() => setCreateOpen(true)} className="gap-2">
           <Plus className="size-4" />
-          Tambah Pelanggan
+          Pelanggan
         </Button>
       </div>
 
