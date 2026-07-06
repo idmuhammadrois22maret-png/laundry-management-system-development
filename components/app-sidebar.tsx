@@ -65,9 +65,11 @@ export function AppSidebar({ children }: AppSidebarProps) {
                 size="lg"
                 className="flex items-center gap-3 w-full group cursor-default"
               >
-                <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 shadow-sm ring-1 ring-white/20">
-                  <Sparkles className="size-4 text-white" />
-                </div>
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+                  <rect width="32" height="32" rx="8" fill="#111827"/>
+                  <path d="M10 20V12L16 8L22 12V20L16 24L10 20Z" fill="white" opacity="0.9"/>
+                  <path d="M13 16L15 18L19 14" stroke="#111827" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
                 <span className="font-bold text-base tracking-tight group-data-[collapsible=icon]:hidden">Laundrio</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
