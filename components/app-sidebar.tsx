@@ -68,7 +68,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
                 <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 shadow-sm ring-1 ring-white/20">
                   <Sparkles className="size-4 text-white" />
                 </div>
-                <span className="font-bold text-base tracking-tight">Laundrio</span>
+                <span className="font-bold text-base tracking-tight group-data-[collapsible=icon]:hidden">Laundrio</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -88,8 +88,8 @@ export function AppSidebar({ children }: AppSidebarProps) {
                         onClick={() => router.push(item.href)}
                         tooltip={item.label}
                       >
-                        <Icon className="size-4" />
-                        <span>{item.label}</span>
+                        <Icon className="size-4 shrink-0" />
+                        <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )
@@ -104,14 +104,14 @@ export function AppSidebar({ children }: AppSidebarProps) {
             <SidebarMenuItem>
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-sidebar-accent data-[open]:bg-sidebar-accent">
-                  <div className="flex size-7 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-blue-700 text-[10px] font-bold text-white">
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-blue-700 text-[10px] font-bold text-white">
                     A
                   </div>
-                  <div className="flex-1 text-left min-w-0">
+                  <div className="flex-1 text-left min-w-0 group-data-[collapsible=icon]:hidden">
                     <p className="truncate text-sm font-medium">Akun</p>
                     <p className="truncate text-xs text-muted-foreground">Kelola akun</p>
                   </div>
-                  <LogOut className="size-3.5 shrink-0 text-muted-foreground/60" />
+                  <LogOut className="size-3.5 shrink-0 text-muted-foreground/60 group-data-[collapsible=icon]:hidden" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" side="top" className="w-56">
                   <DropdownMenuItem onClick={handleLogout} className="text-red-600 gap-3">

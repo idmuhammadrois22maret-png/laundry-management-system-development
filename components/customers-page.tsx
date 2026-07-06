@@ -153,7 +153,7 @@ export function CustomersPage() {
               <p className="text-sm font-medium text-foreground font-bold p-2">{s.title}</p>
               <div className="flex items-center justify-between rounded-xl bg-card p-5">
                 <div className="space-y-1">
-                  <p className="text-5xl font-bold tracking-tight text-foreground">{s.value}</p>
+                  <p className="text-4xl font-bold tracking-tight text-foreground">{s.value}</p>
                 </div>
                 <div className={`flex size-[60px] shrink-0 items-center justify-center rounded-xl ${s.bg}`}>
                   <Icon className={`size-6 ${s.color}`} />
