@@ -3,7 +3,7 @@
 import * as React from 'react'
 import {
   LayoutDashboard, Users, ShoppingCart, CreditCard, Bell, FileText,
-  ChevronLeft, Sparkles, Moon, Sun, LogOut,
+  ChevronLeft, Moon, Sun, LogOut,
 } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
